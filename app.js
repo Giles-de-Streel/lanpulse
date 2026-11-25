@@ -801,16 +801,17 @@ function viewWifi(x) {
     const p = Math.max(4, Math.min(100, (r + 95) * 100 / 55));
     return `<span class="sigbar"><i class="${rate(r)[1]}" style="width:${p.toFixed(0)}%"></i></span>`;
   };
+  const hasBand = wifi.some((c) => c.link.band), hasRate = wifi.some((c) => c.link.rate_mbps);
   sortable([
     ["name", "Device", (c) => c.name || ""], ["ip", "IP address", (c) => ipNum(c.ip)], ["node", "Access point", (c) => c.link.node || ""],
-    ["band", "Band", (c) => (c.link.band ? +c.link.band : null)], ["rssi", "Signal", (c) => c.link.rssi ?? null],
-    ["rating", "Rating", (c) => c.link.rssi ?? null], ["rate", "Link speed", (c) => c.link.rate_mbps ?? null],
+    ...(hasBand ? [["band", "Band", (c) => (c.link.band ? +c.link.band : null)]] : []), ["rssi", "Signal", (c) => c.link.rssi ?? null],
+    ["rating", "Rating", (c) => c.link.rssi ?? null], ...(hasRate ? [["rate", "Link speed", (c) => c.link.rate_mbps ?? null]] : []),
   ], rows, (c) => {
     const r = rate(c.link.rssi);
     return `<tr>
       <td>${esc(c.name || "") || `<span class="help">(no name)</span>`}</td><td>${esc(c.ip || "")}</td><td>${esc(c.link.node || "")}</td>
-      <td>${c.link.band ? `${c.link.band} GHz` : `<span class="help">not reported</span>`}</td>
+      ${hasBand ? `<td>${c.link.band ? `${c.link.band} GHz` : `<span class="help">not reported</span>`}</td>` : ""}
       <td class="sigcell">${bar(c.link.rssi)} ${c.link.rssi != null ? `${Math.round(c.link.rssi)} dBm` : `<span class="help">not reported</span>`}</td>
-      <td>${r ? `<span class="rate ${r[1]}">${r[2]}</span>` : ""}</td><td>${c.link.rate_mbps ? `${Math.round(c.link.rate_mbps)} Mbps` : ""}</td></tr>`;
+      <td>${r ? `<span class="rate ${r[1]}">${r[2]}</span>` : ""}</td>${hasRate ? `<td>${c.link.rate_mbps ? `${Math.round(c.link.rate_mbps)} Mbps` : ""}</td>` : ""}</tr>`;
   });
 }
