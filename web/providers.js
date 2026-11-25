@@ -48,6 +48,28 @@ export const PROVIDERS = {
         }
       };
       walk(s);
+      // ?scale=200 pads the demo to about that many tiles, to preview how big sites look
+      const want = parseInt(new URLSearchParams(location.search).get("scale") || "0", 10);
+      if (want > 0) {
+        const base = s.groups.filter((g) => g.name !== "Network health");
+        let n = s.groups.reduce((a, g) => a + g.items.length, 0), copy = 1;
+        while (n < want && copy < 100) {
+          copy++;
+          for (const g of base) {
+            if (n >= want) break;
+            const items = g.items.slice(0, want - n).map((i) => ({ ...i, id: `${i.id}-${copy}`, name: `${i.name} ${copy}`,
+              status: i.status === "down" ? "up" : i.status, since: undefined }));
+            s.groups.push({ name: `${g.name} (building ${copy})`, items });
+            n += items.length;
+          }
+        }
+        const counts = {};
+        for (const g of s.groups) for (const i of g.items) {
+          const k = i.status === "warn" && i.priority === "low" ? "note" : i.status;
+          counts[k] = (counts[k] || 0) + 1;
+        }
+        s.summary = { total: n, up: 0, down: 0, warn: 0, note: 0, pending: 0, maintenance: 0, unknown: 0, ...counts };
+      }
       return s;
     },
   },
