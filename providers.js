@@ -36,10 +36,18 @@ export const PROVIDERS = {
     fields: [],
     load: async () => {
       const s = await getJSON("demo/snapshot.json");
-      // keep the demo looking live
-      s.generated = new Date().toISOString();
-      for (const g of s.groups) for (const i of g.items)
-        if (i.since) i.since = new Date(Date.now() - 12 * 60_000).toISOString();
+      // keep the demo looking live: move every timestamp forward so "generated" is now
+      const shift = Date.now() - Date.parse(s.generated);
+      const move = (v) => new Date(Date.parse(v.replace(" ", "T") + (/[Z+]/.test(v.slice(10)) ? "" : "Z")) + shift).toISOString();
+      const walk = (o) => {
+        if (Array.isArray(o)) return o.forEach(walk);
+        if (!o || typeof o !== "object") return;
+        for (const [k, v] of Object.entries(o)) {
+          if (typeof v === "string" && ["generated", "since", "at", "first_seen", "last_seen"].includes(k)) o[k] = move(v);
+          else walk(v);
+        }
+      };
+      walk(s);
       return s;
     },
   },
