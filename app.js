@@ -77,12 +77,21 @@ function render(snap) {
 
   const groups = $("#groups");
   groups.innerHTML = "";
-  for (const g of snap.groups || []) {
+  // wall screen: groups with problems move to the top (down first, then things to look at)
+  const gRank = (g) => (g.items.some((i) => i.status === "down") ? 0
+    : g.items.some((i) => i.status === "warn" && !isNote(i)) ? 1 : 2);
+  const ordered = KIOSK ? [...(snap.groups || [])].map((g, n) => [g, n]).sort((a, b) => gRank(a[0]) - gRank(b[0]) || a[1] - b[1]).map((x) => x[0])
+                        : (snap.groups || []);
+  for (const g of ordered) {
     const sec = document.createElement("section");
     const gBad = g.items.filter((i) => i.status === "down").length;
     const gLook = g.items.filter((i) => i.status === "warn" && !isNote(i)).length;
     const gNote = g.items.filter(isNote).length;
     sec.className = "group";
+    // "healthy" groups can collapse to one line on the wall screen; notes don't stop that
+    const okCount = g.items.filter((i) => i.status === "up" || i.status === "maintenance" || isNote(i)).length;
+    sec.dataset.healthy = !gBad && !gLook && okCount === g.items.length ? "1" : "";
+    sec.dataset.summary = `${g.name}: ${g.items.length === 1 ? "working" : `all ${g.items.length} working`}${gNote ? ` · ${gNote} ${gNote === 1 ? "note" : "notes"}` : ""}`;
     const firstFlag = g.items.find((i) => i.status === "down") || g.items.find((i) => i.status === "warn" && !isNote(i)) || g.items.find(isNote);
     const pills = `${gBad ? `<span class="pill down">${gBad} down</span>` : ""}${gLook ? `<span class="pill warn">${gLook} to look at</span>` : ""}${gNote ? `<span class="pill note">${gNote} ${gNote === 1 ? "note" : "notes"}</span>` : ""}`;
     sec.innerHTML = `<h2>${esc(g.name)} ${firstFlag && pills ? `<a class="pill-link" href="#tile-${esc(firstFlag.id)}">${pills}</a>` : ""}</h2><div class="tiles"></div>`;
@@ -112,6 +121,7 @@ function render(snap) {
     groups.append(sec);
   }
   renderDetails(snap.extras || {});
+  if (KIOSK) requestAnimationFrame(fitKiosk);
 
   const gen = snap.generated ? new Date(snap.generated) : null;
   const stale = !gen || Date.now() - gen.getTime() > STALE_MS;
@@ -133,6 +143,74 @@ const table = (heads, rows) => rows.length
       rows.map((r) => `<tr>${r.map((c) => `<td>${c ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
   : `<p class="help">Nothing to show.</p>`;
 const yes = (b) => (b ? "✓" : "");
+
+// ---------------------------------------------------------------- wall screen: fit to one screen
+// The wall screen can't be scrolled by anyone, so everything must fit. Try progressively denser
+// layouts and stop at the first that fits: full tiles → compact tiles → healthy groups collapsed
+// to one line → mini tiles. If even that overflows, split the groups into pages and rotate.
+const KIOSK_PAGE_MS = 15_000;
+const kioskState = { page: 0, timer: null, pages: [] };
+
+function fitsScreen() {
+  return document.documentElement.scrollHeight <= window.innerHeight + 2;
+}
+
+function fitKiosk() {
+  const body = document.body, secs = [...document.querySelectorAll("#groups > section.group")];
+  const levels = [
+    { density: "", collapse: false },
+    { density: "compact", collapse: false },
+    { density: "compact", collapse: true },
+    { density: "mini", collapse: true },
+  ];
+  const apply = (lv) => {
+    body.classList.toggle("k-compact", lv.density === "compact");
+    body.classList.toggle("k-mini", lv.density === "mini");
+    for (const s of secs) {
+      const c = lv.collapse && s.dataset.healthy === "1";
+      s.classList.toggle("collapsed", c);
+      const h = $("h2", s);
+      if (c && !h.dataset.full) { h.dataset.full = h.innerHTML; h.textContent = s.dataset.summary; }
+      if (!c && h.dataset.full) { h.innerHTML = h.dataset.full; delete h.dataset.full; }
+    }
+  };
+  for (const s of secs) s.hidden = false;
+  $("#k-pager")?.remove();
+  let fitted = false;
+  for (const lv of levels) {
+    apply(lv);
+    if (fitsScreen()) { fitted = true; break; }
+  }
+  clearInterval(kioskState.timer);
+  if (fitted) { kioskState.pages = []; return; }
+  // Paging: collapsed (all-good) groups stay on every page; the rest are dealt into pages in order.
+  const rest = secs.filter((s) => !s.classList.contains("collapsed"));
+  const pages = [];
+  let cur = [];
+  for (const s of rest) s.hidden = true;
+  for (const s of rest) {
+    s.hidden = false;
+    if (!fitsScreen() && cur.length) {           // this group doesn't fit: start a new page with it
+      for (const x of cur) x.hidden = true;
+      pages.push(cur);
+      cur = [];
+    }
+    cur.push(s);
+  }
+  if (cur.length) pages.push(cur);
+  kioskState.pages = pages;
+  if (kioskState.page >= pages.length) kioskState.page = 0;
+  const show = () => {
+    for (const s of rest) s.hidden = true;
+    for (const s of pages[kioskState.page]) s.hidden = false;
+    let p = $("#k-pager");
+    if (!p) { p = document.createElement("div"); p.id = "k-pager"; document.body.append(p); }
+    p.textContent = `Page ${kioskState.page + 1} of ${pages.length}`;
+  };
+  show();
+  kioskState.timer = setInterval(() => { kioskState.page = (kioskState.page + 1) % pages.length; show(); }, KIOSK_PAGE_MS);
+}
+if (KIOSK) addEventListener("resize", () => requestAnimationFrame(fitKiosk));
 
 function renderDetails(x) {
   const box = $("#details");
