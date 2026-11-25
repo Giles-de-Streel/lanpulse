@@ -242,3 +242,5 @@ button.chip span { opacity: .75; font-variant-numeric: tabular-nums; }
 .sigbar i.fair, .sigbar i.weak { background: var(--pending); }
 .sigbar i.poor { background: var(--down); }
 .sigcell { white-space: nowrap; }
+body.kiosk .group.collapsed h2 a.more { color: #0f766e; font-weight: 600; text-decoration: none; }
+body.kiosk .group.collapsed h2 a.more:hover { text-decoration: underline; }

@@ -188,7 +188,12 @@ function fitKiosk() {
       s.classList.toggle("collapsed", c);
       s.hidden = !!(lv.merge && c);
       const h = $("h2", s);
-      if (c && !h.dataset.full) { h.dataset.full = h.innerHTML; h.textContent = s.dataset.summary; }
+      if (c && !h.dataset.full) {
+        h.dataset.full = h.innerHTML;
+        // keep detail-page links (e.g. Devices, Wi-Fi signal) reachable when the group is a chip
+        const links = [...s.querySelectorAll(".tile .more")].map((a) => `<a class="more" href="${a.getAttribute("href")}">${esc($(".name", a.closest(".tile"))?.textContent || "details")} ↗</a>`);
+        h.innerHTML = esc(s.dataset.summary) + (links.length ? ` · ${links.join(" · ")}` : "");
+      }
       if (!c && h.dataset.full) { h.innerHTML = h.dataset.full; delete h.dataset.full; }
     }
     if (lv.merge) {
