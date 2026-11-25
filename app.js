@@ -752,7 +752,7 @@ function viewDevices(x) {
   $("#v-filters").querySelectorAll(".chip").forEach((c) => { $("span", c).textContent = all.filter(test[c.dataset.f]).length; });
   const rows = all.filter(test[viewState.filter] || test.all).filter(matches);
   if (!viewState.sort) rows.sort((a, b) => ((b.new ? 1 : 0) - (a.new ? 1 : 0)) || ((b.online ? 1 : 0) - (a.online ? 1 : 0)) || (ipNum(a.ip) - ipNum(b.ip)));
-  const conn = (d) => (d.link ? linkText(d.link) : `<span class="help">${x.clients ? "not in router's list" : "connect a router to see"}</span>`);
+  const conn = (d) => (d.link ? linkText({ ...d.link, rssi: null }) : `<span class="help">${x.clients ? "not in router's list" : "connect a router to see"}</span>`);
   $("#v-summary").innerHTML = `<p class="help">${all.filter((d) => d.online).length} online now, ${all.length} seen in total.
     ${x.clients ? "Connection details come from the router." : "Connect your router (admin view) to see wired / 2.4 / 5 GHz and signal for each device."}
     Names and makers come from the device finder (NetAlertX); rename devices there.</p>`;
