@@ -47,6 +47,7 @@ const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const pct = (u) => (u == null ? "" : `${(u * 100).toFixed(u >= 0.9995 ? 0 : 1)}%`);
 
 function render(snap) {
+  LAST_SNAP = snap;
   const site = snap.site || {};
   document.title = site.name || "lanpulse";
   $("#site-name").textContent = site.name || "Network status";
@@ -308,7 +309,10 @@ async function loadBoxSettings() {
       const [r, j] = await api("api/settings");
       if (r.ok) { BOX = j; renderSetup(); }
     } catch { /* ignore */ }
+    if (params.has("admin")) renderAdminPanel();
   } else {
+    $("#admin-panel").hidden = true;
+    document.body.classList.remove("admin-view");
     BOX = null;
     $("#setup").hidden = true;
     if (params.has("admin") && !$("#signin-dialog").open && !loadBoxSettings.asked) {
@@ -321,8 +325,9 @@ async function loadBoxSettings() {
 function renderAdminBar() {
   const bar = $("#admin-bar");
   const back = FROM_KIOSK ? `<a class="button ghost" href="./?kiosk">Back to wall screen</a>` : "";
+  const toAdmin = SESSION.signed_in && !params.has("admin") ? `<a class="button ghost" href="./?admin">Admin view</a>` : "";
   bar.innerHTML = SESSION.signed_in
-    ? `<span class="who">Administrator</span> <button id="signout" class="ghost">Sign out</button> ${back}`
+    ? `<span class="who">Administrator</span> ${toAdmin} <button id="signout" class="ghost">Sign out</button> ${back}`
     : `<button id="signin" class="ghost">Administrator sign-in</button> ${back}`;
   bar.hidden = false;
   $("#signout")?.addEventListener("click", async () => {
@@ -358,9 +363,81 @@ $("#signin-form").addEventListener("submit", async (e) => {
     const [r, j] = await api(first ? "api/admin/setup" : "api/login", { method: "POST", body: JSON.stringify({ password: pw }) });
     if (!r.ok) return say(j.error || `Failed (HTTP ${r.status})`);
     $("#signin-dialog").close();
+    if (!params.has("admin")) { location.href = `./?admin${FROM_KIOSK ? "&from=kiosk" : ""}`; return; }
     await loadBoxSettings();
   } catch (err) { say(`Couldn't reach the box: ${err.message}`); }
 });
+
+// ---------------------------------------------------------------- admin view (?admin, signed in)
+var LAST_SNAP = null;
+
+function adminHealth() {
+  const src = (LAST_SNAP?.sources || []).map((s) => `<li>${s.ok ? "✓" : `<span class="weak">✗</span>`} ${esc(s.name)}${s.error ? `: <span class="weak">${esc(s.error)}</span>` : ""}</li>`).join("");
+  const nc = LAST_SNAP?.extras?.netcheck;
+  return `<ul class="facts">${src || "<li>Loading…</li>"}</ul>` +
+    (nc ? `<p class="help">Network checks last ran ${esc(ago(nc.generated))} from ${esc(nc.interface || "?")} (${esc(nc.interface_kind || "")}), gateway ${esc(nc.gateway || "?")}.</p>` : "");
+}
+
+function renderAdminPanel() {
+  const p = $("#admin-panel");
+  document.body.classList.add("admin-view");
+  if (p.dataset.done) { $("#ap-health").innerHTML = adminHealth(); return; }   // keep forms intact
+  p.dataset.done = "1";
+  const host = location.hostname;
+  const tool = (port, name, what) => `<a class="toolcard" href="http://${host}:${port}/" target="${FROM_KIOSK ? "_self" : "_blank"}" rel="noopener"><b>${name}</b><span>${what}</span></a>`;
+  p.innerHTML = `
+    <div class="admin-head">
+      <h2>Administration</h2>
+      <div class="admin-actions">
+        ${FROM_KIOSK ? `<a class="button" href="./?kiosk">Back to wall screen</a>` : `<a class="button ghost" href="./">Leave admin view</a>`}
+        <button id="ap-signout" class="ghost">Sign out</button>
+      </div>
+    </div>
+    ${FROM_KIOSK ? `<p class="help">Returns to the wall screen by itself after 10 minutes without use.</p>` : ""}
+    <div class="admin-grid">
+      <div class="admin-card"><h3>Router connection</h3><div id="ap-router"></div></div>
+      <div class="admin-card"><h3>Tools</h3>
+        <div class="tools">
+          ${tool(3001, "Uptime Kuma", "Add or change monitored devices, alerts and notifications")}
+          ${tool(20211, "NetAlertX", "Every device on the network, names, new-device alerts")}
+          ${tool(8765, "Speedtest Tracker", "Internet speed history and test schedule")}
+        </div>
+      </div>
+      <div class="admin-card"><h3>Box health</h3><div id="ap-health">${adminHealth()}</div></div>
+      <div class="admin-card"><h3>Administrator password</h3>
+        <form id="ap-pw" autocomplete="off">
+          <label>Current password <input id="ap-cur" type="password" autocomplete="current-password"></label>
+          <label>New password <input id="ap-new" type="password" autocomplete="new-password"></label>
+          <label>New password again <input id="ap-new2" type="password" autocomplete="new-password"></label>
+          <p id="ap-pw-result" class="result" hidden></p>
+          <button type="submit">Change password</button>
+        </form>
+      </div>
+    </div>
+    <h2 class="live-head">Live status</h2>`;
+  p.hidden = false;
+  // router card: reuse the setup card, placed inside the admin view
+  const setup = $("#setup");
+  $("#ap-router").append(setup);
+  setup.hidden = !BOX;
+  $("#ap-signout").onclick = async () => {
+    try { await api("api/logout", { method: "POST", body: "{}" }); } catch {}
+    location.href = FROM_KIOSK ? "./?kiosk" : "./";
+  };
+  $("#ap-pw").onsubmit = async (e) => {
+    e.preventDefault();
+    const out = $("#ap-pw-result");
+    const say = (m, ok) => { out.hidden = false; out.className = `result ${ok ? "good" : "bad"}`; out.textContent = m; };
+    if ($("#ap-new").value !== $("#ap-new2").value) return say("The new passwords don't match.");
+    if ($("#ap-new").value.length < 8) return say("Use at least 8 characters.");
+    try {
+      const [r, j] = await api("api/admin/password", { method: "POST", body: JSON.stringify({ current: $("#ap-cur").value, password: $("#ap-new").value }) });
+      if (!r.ok) return say(j.error || `Failed (HTTP ${r.status})`);
+      $("#ap-pw").reset();
+      say("Password changed.", true);
+    } catch (err) { say(`Couldn't reach the box: ${err.message}`); }
+  };
+}
 
 // Opened from the wall screen: go back there after 10 minutes without use, so it's never left signed in.
 if (FROM_KIOSK) {
