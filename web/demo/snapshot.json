@@ -1,34 +1,4316 @@
 {
-  "schema": "lanpulse.snapshot/1",
-  "generated": "2026-01-01T12:00:00+00:00",
-  "sources": [{ "name": "demo", "ok": true }],
-  "site": {
-    "name": "Example Community Center",
-    "description": "Green means working. Red means not responding. If something stays red for more than 10 minutes, let the network volunteer know."
+ "schema": "lanpulse.snapshot/1",
+ "generated": "2026-01-01T12:00:00+00:00",
+ "sources": [
+  {
+   "name": "demo",
+   "ok": true
+  }
+ ],
+ "site": {
+  "name": "Example Site",
+  "description": "Sample data. Green means working, amber means worth a look, red means not responding."
+ },
+ "groups": [
+  {
+   "name": "Internet",
+   "items": [
+    {
+     "id": "d1",
+     "name": "Internet connection",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 18,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": null
+    },
+    {
+     "id": "d2",
+     "name": "Websites load",
+     "kind": "http",
+     "status": "up",
+     "latency_ms": 142,
+     "uptime_24h": 1,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ]
+    },
+    {
+     "id": "d3",
+     "name": "Name lookups (DNS)",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 4,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ]
+    }
+   ]
   },
-  "summary": { "total": 11, "up": 9, "down": 1, "pending": 1, "maintenance": 0, "unknown": 0 },
-  "groups": [
-    { "name": "Internet", "items": [
-      { "id": "d1", "name": "Internet connection", "kind": "ping", "status": "up", "latency_ms": 24, "uptime_24h": 1,
-        "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
-      { "id": "d2", "name": "Websites load", "kind": "http", "status": "up", "latency_ms": 180, "uptime_24h": 0.998,
-        "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"down"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] }
-    ]},
-    { "name": "Wi-Fi", "items": [
-      { "id": "d3", "name": "Main router", "kind": "ping", "status": "up", "latency_ms": 2, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
-      { "id": "d4", "name": "Hall access point", "kind": "ping", "status": "up", "latency_ms": 6, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
-      { "id": "d5", "name": "Office access point", "kind": "ping", "status": "pending", "latency_ms": null, "uptime_24h": 0.97, "message": "1 missed check", "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"pending"}] }
-    ]},
-    { "name": "Security", "items": [
-      { "id": "d6", "name": "Front door camera", "kind": "ping", "status": "down", "latency_ms": null, "uptime_24h": 0.86, "since": "2026-01-01T11:48:00+00:00", "message": "No reply to ping", "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"down"},{"s":"down"},{"s":"down"},{"s":"down"}] },
-      { "id": "d7", "name": "Parking lot camera", "kind": "ping", "status": "up", "latency_ms": 41, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] }
-    ]},
-    { "name": "Office & building", "items": [
-      { "id": "d8", "name": "Printer", "kind": "port", "status": "up", "latency_ms": 5, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
-      { "id": "d9", "name": "Thermostat (sanctuary)", "kind": "ping", "status": "up", "latency_ms": 60, "uptime_24h": 0.99, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
-      { "id": "d10", "name": "Thermostat (hall)", "kind": "ping", "status": "up", "latency_ms": 72, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
-      { "id": "d11", "name": "Livestream PC", "kind": "ping", "status": "up", "latency_ms": 3, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] }
-    ]}
+  {
+   "name": "Network equipment",
+   "items": [
+    {
+     "id": "d4",
+     "name": "Main router",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 1,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    },
+    {
+     "id": "d5",
+     "name": "Office switch",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 1,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Main router"
+     }
+    },
+    {
+     "id": "d6",
+     "name": "Mesh point: Hall",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 6,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wifi",
+      "band": "5",
+      "node": "Main router",
+      "rssi": -58,
+      "rate_mbps": 1200
+     }
+    },
+    {
+     "id": "d7",
+     "name": "Mesh point: Classroom wing",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 11,
+     "uptime_24h": 0.986,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "down"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "down"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wifi",
+      "band": "5",
+      "node": "Mesh point: Hall",
+      "rssi": -74,
+      "rate_mbps": 390
+     }
+    },
+    {
+     "id": "d8",
+     "name": "Access point: Kitchen",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 2,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Office",
+   "items": [
+    {
+     "id": "d9",
+     "name": "Front office printer",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 3,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    },
+    {
+     "id": "d10",
+     "name": "Copier / scanner",
+     "kind": "ping",
+     "status": "down",
+     "latency_ms": null,
+     "uptime_24h": 0.71,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "down"
+      },
+      {
+       "s": "down"
+      },
+      {
+       "s": "down"
+      },
+      {
+       "s": "down"
+      }
+     ],
+     "since": "2026-01-01T11:48:00+00:00",
+     "message": "No reply for 12 minutes",
+     "link": {
+      "type": "wifi",
+      "band": "2.4",
+      "node": "Main router",
+      "rssi": -79,
+      "rate_mbps": 39
+     }
+    },
+    {
+     "id": "d11",
+     "name": "Office PC",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 2,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    },
+    {
+     "id": "d12",
+     "name": "File server (NAS)",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 1,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    },
+    {
+     "id": "d13",
+     "name": "Phone system",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 2,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Security & building",
+   "items": [
+    {
+     "id": "d14",
+     "name": "Camera: Front door",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 9,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wifi",
+      "band": "2.4",
+      "node": "Mesh point: Hall",
+      "rssi": -63,
+      "rate_mbps": 72
+     }
+    },
+    {
+     "id": "d15",
+     "name": "Camera: Parking lot",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 14,
+     "uptime_24h": 0.973,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "down"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "down"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "down"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wifi",
+      "band": "2.4",
+      "node": "Mesh point: Classroom wing",
+      "rssi": -81,
+      "rate_mbps": 26
+     }
+    },
+    {
+     "id": "d16",
+     "name": "Door access controller",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 2,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    },
+    {
+     "id": "d17",
+     "name": "Thermostat: Hall",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 21,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wifi",
+      "band": "2.4",
+      "node": "Mesh point: Hall",
+      "rssi": -66,
+      "rate_mbps": 65
+     }
+    },
+    {
+     "id": "d18",
+     "name": "Thermostat: Classroom wing",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 25,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wifi",
+      "band": "2.4",
+      "node": "Mesh point: Classroom wing",
+      "rssi": -71,
+      "rate_mbps": 52
+     }
+    },
+    {
+     "id": "d19",
+     "name": "Fire panel dialer",
+     "kind": "port",
+     "status": "maintenance",
+     "latency_ms": null,
+     "uptime_24h": null,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "message": "Paused for scheduled service"
+    }
+   ]
+  },
+  {
+   "name": "Media & meeting rooms",
+   "items": [
+    {
+     "id": "d20",
+     "name": "Hall projector",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 4,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    },
+    {
+     "id": "d21",
+     "name": "Livestream encoder",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 3,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    },
+    {
+     "id": "d22",
+     "name": "Smart TV: Lounge",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 8,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wifi",
+      "band": "5",
+      "node": "Access point: Kitchen",
+      "rssi": -55,
+      "rate_mbps": 433
+     }
+    },
+    {
+     "id": "d23",
+     "name": "Sound board",
+     "kind": "ping",
+     "status": "up",
+     "latency_ms": 2,
+     "uptime_24h": 1.0,
+     "history": [
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      },
+      {
+       "s": "up"
+      }
+     ],
+     "link": {
+      "type": "wired",
+      "node": "Office switch"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Network health",
+   "items": [
+    {
+     "id": "net-uplink",
+     "name": "Internet uplink",
+     "kind": "netcheck",
+     "status": "up",
+     "note": "Example 5G home internet, 5G n41: good, 4 bars, RSRP -88, SINR 21; LTE B66: fair, RSRP -104, SINR 9"
+    },
+    {
+     "id": "net-speed",
+     "name": "Internet speed",
+     "kind": "netcheck",
+     "status": "up",
+     "note": "286 down / 22 up Mbps, 17 ms (normal here: 291 / 23)"
+    },
+    {
+     "id": "net-dhcp",
+     "name": "DHCP servers",
+     "kind": "netcheck",
+     "status": "warn",
+     "note": "Extra DHCP server found: 192.168.1.60. A second router or mesh unit may be handing out addresses (expected only 192.168.1.1)",
+     "hint": "Find the device at that address and turn off its DHCP server, or switch it to access point (bridge) mode."
+    },
+    {
+     "id": "net-nat",
+     "name": "Router layout (NAT)",
+     "kind": "netcheck",
+     "status": "up",
+     "note": "One router between this network and the internet"
+    },
+    {
+     "id": "net-upnp",
+     "name": "Ports open to the internet (UPnP)",
+     "kind": "netcheck",
+     "status": "warn",
+     "note": "2 port(s) opened automatically by devices: TCP 8443 \u2192 192.168.1.41:443 (Camera NVR); UDP 3478 \u2192 192.168.1.77:3478 (Game console)",
+     "hint": "Check you recognise the devices listed. If nothing needs to be reachable from the internet, turn off UPnP in the router's settings."
+    },
+    {
+     "id": "net-loss-gw",
+     "name": "Connection to router",
+     "kind": "netcheck",
+     "status": "up",
+     "note": "Steady: 0% loss, avg 1 ms, jitter 0 ms"
+    },
+    {
+     "id": "net-loss-net",
+     "name": "Connection to internet",
+     "kind": "netcheck",
+     "status": "up",
+     "note": "Steady: 0% loss, avg 17 ms, jitter 3 ms"
+    },
+    {
+     "id": "net-dns",
+     "name": "Name lookups (DNS)",
+     "kind": "netcheck",
+     "status": "up",
+     "note": "Answering: 6 ms via 192.168.1.1"
+    },
+    {
+     "id": "net-publicip",
+     "name": "Public IP address",
+     "kind": "netcheck",
+     "status": "up",
+     "note": "203.0.113.45 (public)"
+    },
+    {
+     "id": "net-airspace",
+     "name": "Wi-Fi airspace",
+     "kind": "netcheck",
+     "status": "warn",
+     "note": "5 of your access points (2.4/5/6 GHz), 9 neighbouring. 2.4 GHz channel 6 is heavily congested (78% of airtime in use); 2.4 GHz channel 3 partly overlaps 3 neighbouring network(s) on channel 1, 6; channel 11 looks clearest",
+     "hint": "Change the Wi-Fi channel in the router's settings (or set it to automatic). The Wi-Fi airspace details below show which channels are clearest."
+    },
+    {
+     "id": "net-devices",
+     "name": "Devices on the network",
+     "kind": "netcheck",
+     "status": "warn",
+     "priority": "low",
+     "note": "41 online now, 63 seen in total; 2 new: Galaxy-Tab, (unknown device)",
+     "hint": "If you recognise them, there's nothing to do: they stop counting as new after 24 hours. If not, look them up in the device finder (NetAlertX, port 20211) or the router's device list."
+    },
+    {
+     "id": "net-weak-wifi",
+     "name": "Wi-Fi signal of devices",
+     "kind": "netcheck",
+     "status": "warn",
+     "priority": "low",
+     "note": "3 of 34 Wi-Fi devices have a poor signal: Camera: Parking lot (-81 dBm), Laptop-Guest-7 (-84 dBm), Sensor-Garden (-86 dBm). 5 more are weak but usable",
+     "hint": "Devices far from the router or behind walls drop out and slow down. Try moving the router more centrally and up high, away from metal and thick walls; add a mesh point or access point near the weak devices; and use a cable for things that never move (TVs, PCs, game consoles)."
+    }
+   ]
+  }
+ ],
+ "extras": {
+  "netcheck": {
+   "generated": "2026-01-01T11:56:00+00:00",
+   "interface": "eth0",
+   "interface_kind": "wired",
+   "gateway": "192.168.1.1",
+   "note": null
+  },
+  "uplink": {
+   "kind": "cellular",
+   "provider": "Example 5G home internet",
+   "model": "Example 5G gateway",
+   "firmware": "1.2.3",
+   "uptime_s": 1987200,
+   "registered": true,
+   "cells": [
+    {
+     "tech": "5G",
+     "bands": [
+      "n41"
+     ],
+     "bars": 4,
+     "rsrp": -88,
+     "rsrq": -9,
+     "sinr": 21,
+     "rssi": -76,
+     "quality": "good"
+    },
+    {
+     "tech": "4G",
+     "bands": [
+      "B66"
+     ],
+     "bars": 3,
+     "rsrp": -104,
+     "rsrq": -12,
+     "sinr": 9,
+     "rssi": -90,
+     "quality": "fair"
+    }
+   ]
+  },
+  "speed": {
+   "history": [
+    {
+     "at": "2025-12-18 20:00:00",
+     "ok": true,
+     "ping_ms": 18.0,
+     "down_mbps": 286.4,
+     "up_mbps": 22.7,
+     "jitter_ms": 2.7,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-19 04:00:00",
+     "ok": true,
+     "ping_ms": 16.6,
+     "down_mbps": 277.0,
+     "up_mbps": 24.7,
+     "jitter_ms": 3.4,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-19 12:00:00",
+     "ok": true,
+     "ping_ms": 17.5,
+     "down_mbps": 304.5,
+     "up_mbps": 23.6,
+     "jitter_ms": 3.2,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-19 20:00:00",
+     "ok": true,
+     "ping_ms": 18.7,
+     "down_mbps": 266.7,
+     "up_mbps": 23.8,
+     "jitter_ms": 3.5,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-20 04:00:00",
+     "ok": true,
+     "ping_ms": 13.5,
+     "down_mbps": 266.3,
+     "up_mbps": 21.7,
+     "jitter_ms": 2.5,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-20 12:00:00",
+     "ok": true,
+     "ping_ms": 16.9,
+     "down_mbps": 294.3,
+     "up_mbps": 23.8,
+     "jitter_ms": 2.4,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-20 20:00:00",
+     "ok": true,
+     "ping_ms": 17.8,
+     "down_mbps": 294.3,
+     "up_mbps": 22.0,
+     "jitter_ms": 4.7,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-21 04:00:00",
+     "ok": true,
+     "ping_ms": 19.4,
+     "down_mbps": 297.8,
+     "up_mbps": 22.1,
+     "jitter_ms": 2.3,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-21 12:00:00",
+     "ok": true,
+     "ping_ms": 16.8,
+     "down_mbps": 285.2,
+     "up_mbps": 23.9,
+     "jitter_ms": 3.2,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-21 20:00:00",
+     "ok": true,
+     "ping_ms": 15.1,
+     "down_mbps": 283.7,
+     "up_mbps": 22.2,
+     "jitter_ms": 4.2,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-22 04:00:00",
+     "ok": true,
+     "ping_ms": 17.5,
+     "down_mbps": 278.7,
+     "up_mbps": 23.6,
+     "jitter_ms": 1.5,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-22 12:00:00",
+     "ok": true,
+     "ping_ms": 19.6,
+     "down_mbps": 290.7,
+     "up_mbps": 20.0,
+     "jitter_ms": 2.7,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-22 20:00:00",
+     "ok": true,
+     "ping_ms": 15.4,
+     "down_mbps": 288.5,
+     "up_mbps": 23.7,
+     "jitter_ms": 2.9,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-23 04:00:00",
+     "ok": true,
+     "ping_ms": 18.7,
+     "down_mbps": 269.5,
+     "up_mbps": 24.0,
+     "jitter_ms": 3.9,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-23 12:00:00",
+     "ok": true,
+     "ping_ms": 17.7,
+     "down_mbps": 310.2,
+     "up_mbps": 23.2,
+     "jitter_ms": 1.7,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-23 20:00:00",
+     "ok": true,
+     "ping_ms": 15.8,
+     "down_mbps": 298.6,
+     "up_mbps": 22.3,
+     "jitter_ms": 1.7,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-24 04:00:00",
+     "ok": true,
+     "ping_ms": 15.9,
+     "down_mbps": 276.5,
+     "up_mbps": 24.9,
+     "jitter_ms": 1.0,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-24 12:00:00",
+     "ok": true,
+     "ping_ms": 17.5,
+     "down_mbps": 105.4,
+     "up_mbps": 25.2,
+     "jitter_ms": 3.6,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-24 20:00:00",
+     "ok": true,
+     "ping_ms": 12.0,
+     "down_mbps": 101.0,
+     "up_mbps": 23.5,
+     "jitter_ms": 2.3,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-25 04:00:00",
+     "ok": true,
+     "ping_ms": 19.0,
+     "down_mbps": 274.3,
+     "up_mbps": 24.7,
+     "jitter_ms": 3.2,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-25 12:00:00",
+     "ok": true,
+     "ping_ms": 17.9,
+     "down_mbps": 293.4,
+     "up_mbps": 25.4,
+     "jitter_ms": 3.6,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-25 20:00:00",
+     "ok": true,
+     "ping_ms": 18.1,
+     "down_mbps": 297.3,
+     "up_mbps": 20.6,
+     "jitter_ms": 4.3,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-26 04:00:00",
+     "ok": true,
+     "ping_ms": 18.1,
+     "down_mbps": 303.4,
+     "up_mbps": 20.0,
+     "jitter_ms": 2.4,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-26 12:00:00",
+     "ok": true,
+     "ping_ms": 13.4,
+     "down_mbps": 301.8,
+     "up_mbps": 22.7,
+     "jitter_ms": 4.0,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-26 20:00:00",
+     "ok": true,
+     "ping_ms": 20.2,
+     "down_mbps": 271.6,
+     "up_mbps": 23.8,
+     "jitter_ms": 2.8,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-27 04:00:00",
+     "ok": true,
+     "ping_ms": 18.3,
+     "down_mbps": 294.5,
+     "up_mbps": 23.2,
+     "jitter_ms": 4.1,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-27 12:00:00",
+     "ok": true,
+     "ping_ms": 16.2,
+     "down_mbps": 280.7,
+     "up_mbps": 24.6,
+     "jitter_ms": 3.0,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-27 20:00:00",
+     "ok": true,
+     "ping_ms": 18.9,
+     "down_mbps": 277.7,
+     "up_mbps": 25.2,
+     "jitter_ms": 2.6,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-28 04:00:00",
+     "ok": true,
+     "ping_ms": 16.7,
+     "down_mbps": 270.7,
+     "up_mbps": 22.8,
+     "jitter_ms": 2.7,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-28 12:00:00",
+     "ok": true,
+     "ping_ms": 14.9,
+     "down_mbps": 309.7,
+     "up_mbps": 24.9,
+     "jitter_ms": 1.7,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-28 20:00:00",
+     "ok": false,
+     "ping_ms": null,
+     "down_mbps": null,
+     "up_mbps": null,
+     "jitter_ms": null,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-29 04:00:00",
+     "ok": true,
+     "ping_ms": 19.3,
+     "down_mbps": 298.8,
+     "up_mbps": 24.3,
+     "jitter_ms": 3.3,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-29 12:00:00",
+     "ok": true,
+     "ping_ms": 17.3,
+     "down_mbps": 292.0,
+     "up_mbps": 23.9,
+     "jitter_ms": 2.8,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-29 20:00:00",
+     "ok": true,
+     "ping_ms": 18.1,
+     "down_mbps": 293.9,
+     "up_mbps": 23.0,
+     "jitter_ms": 3.8,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-30 04:00:00",
+     "ok": true,
+     "ping_ms": 21.0,
+     "down_mbps": 297.9,
+     "up_mbps": 23.5,
+     "jitter_ms": 2.6,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-30 12:00:00",
+     "ok": true,
+     "ping_ms": 17.0,
+     "down_mbps": 284.8,
+     "up_mbps": 24.4,
+     "jitter_ms": 2.7,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-30 20:00:00",
+     "ok": true,
+     "ping_ms": 20.7,
+     "down_mbps": 295.4,
+     "up_mbps": 19.2,
+     "jitter_ms": 1.9,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-31 04:00:00",
+     "ok": true,
+     "ping_ms": 17.8,
+     "down_mbps": 293.4,
+     "up_mbps": 23.4,
+     "jitter_ms": 2.6,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-31 12:00:00",
+     "ok": true,
+     "ping_ms": 17.6,
+     "down_mbps": 299.2,
+     "up_mbps": 22.2,
+     "jitter_ms": 5.4,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2025-12-31 20:00:00",
+     "ok": true,
+     "ping_ms": 15.9,
+     "down_mbps": 295.0,
+     "up_mbps": 22.9,
+     "jitter_ms": 2.8,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2026-01-01 04:00:00",
+     "ok": true,
+     "ping_ms": 11.5,
+     "down_mbps": 289.1,
+     "up_mbps": 22.3,
+     "jitter_ms": 4.0,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    },
+    {
+     "at": "2026-01-01 12:00:00",
+     "ok": true,
+     "ping_ms": 16.9,
+     "down_mbps": 273.6,
+     "up_mbps": 24.4,
+     "jitter_ms": 3.9,
+     "loss_pct": 0,
+     "server": "Example ISP - Springfield"
+    }
+   ],
+   "median_down_mbps": 291.0,
+   "median_up_mbps": 23.0,
+   "tests": 41
+  },
+  "exposure": {
+   "public_ip": "203.0.113.45",
+   "nat": "One router between this network and the internet",
+   "upnp": {
+    "available": true,
+    "wan_ip": "203.0.113.45",
+    "mappings": [
+     {
+      "proto": "TCP",
+      "external_port": 8443,
+      "internal": "192.168.1.41:443",
+      "description": "Camera NVR"
+     },
+     {
+      "proto": "UDP",
+      "external_port": 3478,
+      "internal": "192.168.1.77:3478",
+      "description": "Game console"
+     }
+    ]
+   }
+  },
+  "airspace": {
+   "interface": "wlan0",
+   "adapter_bands": [
+    "2.4",
+    "5",
+    "6"
+   ],
+   "own_ssids": [
+    "Example-Site"
+   ],
+   "notes": [
+    "guest network Example-Site-Guest shares your access points"
+   ],
+   "problems": [
+    "2.4 GHz channel 6 is heavily congested (78% of airtime in use)",
+    "2.4 GHz channel 3 partly overlaps 3 neighbouring network(s) on channel 1, 6; channel 11 looks clearest"
+   ],
+   "ssids": [
+    {
+     "ssid": "Example-Site",
+     "own": true,
+     "access_points": 5,
+     "bands": [
+      "2.4",
+      "5",
+      "6"
+     ],
+     "channels": [
+      "2.4/3",
+      "2.4/6",
+      "5/36",
+      "5/149",
+      "6/37"
+     ],
+     "strongest_dbm": -44,
+     "security": [
+      "WPA3",
+      "WPA3/WPA2"
+     ]
+    },
+    {
+     "ssid": "Example-Site-Guest",
+     "own": true,
+     "access_points": 2,
+     "bands": [
+      "2.4",
+      "5"
+     ],
+     "channels": [
+      "2.4/6",
+      "5/36"
+     ],
+     "strongest_dbm": -45,
+     "security": [
+      "WPA2"
+     ]
+    },
+    {
+     "ssid": "Office-Upstairs",
+     "own": false,
+     "access_points": 2,
+     "bands": [
+      "2.4",
+      "5"
+     ],
+     "channels": [
+      "2.4/4",
+      "5/52"
+     ],
+     "strongest_dbm": -67,
+     "security": [
+      "WPA3/WPA2"
+     ]
+    },
+    {
+     "ssid": "NETGEAR-Home",
+     "own": false,
+     "access_points": 1,
+     "bands": [
+      "2.4"
+     ],
+     "channels": [
+      "2.4/6"
+     ],
+     "strongest_dbm": -69,
+     "security": [
+      "WPA2"
+     ]
+    },
+    {
+     "ssid": "Cafe-Next-Door",
+     "own": false,
+     "access_points": 2,
+     "bands": [
+      "2.4",
+      "5"
+     ],
+     "channels": [
+      "2.4/1",
+      "5/44"
+     ],
+     "strongest_dbm": -71,
+     "security": [
+      "WPA2"
+     ]
+    },
+    {
+     "ssid": "Printer-Direct-55",
+     "own": false,
+     "access_points": 1,
+     "bands": [
+      "2.4"
+     ],
+     "channels": [
+      "2.4/6"
+     ],
+     "strongest_dbm": -73,
+     "security": [
+      "WPA2"
+     ]
+    },
+    {
+     "ssid": "Old-Router",
+     "own": false,
+     "access_points": 1,
+     "bands": [
+      "2.4"
+     ],
+     "channels": [
+      "2.4/1"
+     ],
+     "strongest_dbm": -80,
+     "security": [
+      "WPA (old)"
+     ]
+    },
+    {
+     "ssid": "FreeWiFi",
+     "own": false,
+     "access_points": 1,
+     "bands": [
+      "2.4"
+     ],
+     "channels": [
+      "2.4/11"
+     ],
+     "strongest_dbm": -84,
+     "security": [
+      "Open"
+     ]
+    }
+   ],
+   "hidden_count": 2,
+   "channels": [
+    {
+     "band": "2.4",
+     "channel": 1,
+     "networks": 2,
+     "yours": 0,
+     "strongest_dbm": -71,
+     "utilisation_pct": null,
+     "overlapping": 2,
+     "congestion": "moderate",
+     "basis": "estimated from neighbours"
+    },
+    {
+     "band": "2.4",
+     "channel": 3,
+     "networks": 1,
+     "yours": 1,
+     "strongest_dbm": -61,
+     "utilisation_pct": 41,
+     "overlapping": 7,
+     "congestion": "moderate",
+     "basis": "measured airtime"
+    },
+    {
+     "band": "2.4",
+     "channel": 4,
+     "networks": 1,
+     "yours": 0,
+     "strongest_dbm": -67,
+     "utilisation_pct": null,
+     "overlapping": 7,
+     "congestion": "heavy",
+     "basis": "estimated from neighbours"
+    },
+    {
+     "band": "2.4",
+     "channel": 6,
+     "networks": 4,
+     "yours": 2,
+     "strongest_dbm": -44,
+     "utilisation_pct": 78,
+     "overlapping": 2,
+     "congestion": "heavy",
+     "basis": "measured airtime"
+    },
+    {
+     "band": "2.4",
+     "channel": 11,
+     "networks": 1,
+     "yours": 0,
+     "strongest_dbm": -84,
+     "utilisation_pct": null,
+     "overlapping": 0,
+     "congestion": "clear",
+     "basis": "estimated from neighbours"
+    },
+    {
+     "band": "5",
+     "channel": 36,
+     "networks": 3,
+     "yours": 3,
+     "strongest_dbm": -47,
+     "utilisation_pct": 22,
+     "overlapping": 0,
+     "congestion": "light",
+     "basis": "measured airtime"
+    },
+    {
+     "band": "5",
+     "channel": 44,
+     "networks": 1,
+     "yours": 0,
+     "strongest_dbm": -78,
+     "utilisation_pct": null,
+     "overlapping": 0,
+     "congestion": "clear",
+     "basis": "estimated from neighbours"
+    },
+    {
+     "band": "5",
+     "channel": 52,
+     "networks": 1,
+     "yours": 0,
+     "strongest_dbm": -74,
+     "utilisation_pct": null,
+     "overlapping": 0,
+     "congestion": "clear",
+     "basis": "estimated from neighbours"
+    },
+    {
+     "band": "5",
+     "channel": 100,
+     "networks": 1,
+     "yours": 0,
+     "strongest_dbm": -82,
+     "utilisation_pct": null,
+     "overlapping": 0,
+     "congestion": "clear",
+     "basis": "estimated from neighbours"
+    },
+    {
+     "band": "5",
+     "channel": 149,
+     "networks": 1,
+     "yours": 1,
+     "strongest_dbm": -66,
+     "utilisation_pct": 18,
+     "overlapping": 0,
+     "congestion": "light",
+     "basis": "measured airtime"
+    },
+    {
+     "band": "6",
+     "channel": 37,
+     "networks": 1,
+     "yours": 1,
+     "strongest_dbm": -55,
+     "utilisation_pct": 6,
+     "overlapping": 0,
+     "congestion": "clear",
+     "basis": "measured airtime"
+    }
+   ],
+   "networks": [
+    {
+     "bssid": "02:00:5e:00:01:2d",
+     "ssid": "Example-Site",
+     "band": "2.4",
+     "channel": 6,
+     "signal_dbm": -44,
+     "secure": true,
+     "security": "WPA3/WPA2",
+     "width_mhz": 20,
+     "utilisation_pct": 78,
+     "stations": 14,
+     "associated": false,
+     "own": true
+    },
+    {
+     "bssid": "02:00:5e:00:01:32",
+     "ssid": "Example-Site-Guest",
+     "band": "2.4",
+     "channel": 6,
+     "signal_dbm": -45,
+     "secure": true,
+     "security": "WPA2",
+     "width_mhz": 20,
+     "utilisation_pct": 78,
+     "stations": 4,
+     "associated": false,
+     "own": true,
+     "own_hidden": true,
+     "own_extra": true
+    },
+    {
+     "bssid": "02:00:5e:00:01:30",
+     "ssid": "Example-Site",
+     "band": "2.4",
+     "channel": 3,
+     "signal_dbm": -61,
+     "secure": true,
+     "security": "WPA3/WPA2",
+     "width_mhz": 20,
+     "utilisation_pct": 41,
+     "stations": 6,
+     "associated": false,
+     "own": true
+    },
+    {
+     "bssid": "02:00:5e:00:01:2e",
+     "ssid": "Example-Site",
+     "band": "5",
+     "channel": 36,
+     "signal_dbm": -47,
+     "secure": true,
+     "security": "WPA3/WPA2",
+     "width_mhz": 80,
+     "utilisation_pct": 22,
+     "stations": 9,
+     "associated": false,
+     "own": true
+    },
+    {
+     "bssid": "02:00:5e:00:01:33",
+     "ssid": "Example-Site-Guest",
+     "band": "5",
+     "channel": 36,
+     "signal_dbm": -47,
+     "secure": true,
+     "security": "WPA2",
+     "width_mhz": 80,
+     "utilisation_pct": 22,
+     "stations": 2,
+     "associated": false,
+     "own": true,
+     "own_hidden": true,
+     "own_extra": true
+    },
+    {
+     "bssid": "02:00:5e:00:01:34",
+     "ssid": null,
+     "band": "5",
+     "channel": 36,
+     "signal_dbm": -48,
+     "secure": true,
+     "security": "WPA3",
+     "width_mhz": 80,
+     "utilisation_pct": 22,
+     "stations": 0,
+     "associated": false,
+     "own": true,
+     "own_hidden": true,
+     "own_extra": true
+    },
+    {
+     "bssid": "02:00:5e:00:01:31",
+     "ssid": "Example-Site",
+     "band": "5",
+     "channel": 149,
+     "signal_dbm": -66,
+     "secure": true,
+     "security": "WPA3/WPA2",
+     "width_mhz": 80,
+     "utilisation_pct": 18,
+     "stations": 5,
+     "associated": false,
+     "own": true
+    },
+    {
+     "bssid": "02:00:5e:00:01:2f",
+     "ssid": "Example-Site",
+     "band": "6",
+     "channel": 37,
+     "signal_dbm": -55,
+     "secure": true,
+     "security": "WPA3",
+     "width_mhz": 160,
+     "utilisation_pct": 6,
+     "stations": 3,
+     "associated": false,
+     "own": true
+    },
+    {
+     "bssid": "02:00:5e:00:01:94",
+     "ssid": "Office-Upstairs",
+     "band": "2.4",
+     "channel": 4,
+     "signal_dbm": -67,
+     "secure": true,
+     "security": "WPA3/WPA2",
+     "width_mhz": 20,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    },
+    {
+     "bssid": "02:00:5e:00:01:92",
+     "ssid": "NETGEAR-Home",
+     "band": "2.4",
+     "channel": 6,
+     "signal_dbm": -69,
+     "secure": true,
+     "security": "WPA2",
+     "width_mhz": 20,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    },
+    {
+     "bssid": "02:00:5e:00:01:90",
+     "ssid": "Cafe-Next-Door",
+     "band": "2.4",
+     "channel": 1,
+     "signal_dbm": -71,
+     "secure": true,
+     "security": "WPA2",
+     "width_mhz": 20,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    },
+    {
+     "bssid": "02:00:5e:00:01:93",
+     "ssid": "Printer-Direct-55",
+     "band": "2.4",
+     "channel": 6,
+     "signal_dbm": -73,
+     "secure": true,
+     "security": "WPA2",
+     "width_mhz": 20,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    },
+    {
+     "bssid": "02:00:5e:00:01:97",
+     "ssid": "Old-Router",
+     "band": "2.4",
+     "channel": 1,
+     "signal_dbm": -80,
+     "secure": true,
+     "security": "WPA (old)",
+     "width_mhz": 20,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    },
+    {
+     "bssid": "02:00:5e:00:01:96",
+     "ssid": "FreeWiFi",
+     "band": "2.4",
+     "channel": 11,
+     "signal_dbm": -84,
+     "secure": false,
+     "security": "Open",
+     "width_mhz": 20,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    },
+    {
+     "bssid": "02:00:5e:00:01:95",
+     "ssid": "Office-Upstairs",
+     "band": "5",
+     "channel": 52,
+     "signal_dbm": -74,
+     "secure": true,
+     "security": "WPA3/WPA2",
+     "width_mhz": 80,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    },
+    {
+     "bssid": "02:00:5e:00:01:91",
+     "ssid": "Cafe-Next-Door",
+     "band": "5",
+     "channel": 44,
+     "signal_dbm": -78,
+     "secure": true,
+     "security": "WPA2",
+     "width_mhz": 80,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    },
+    {
+     "bssid": "02:00:5e:00:01:98",
+     "ssid": null,
+     "band": "5",
+     "channel": 100,
+     "signal_dbm": -82,
+     "secure": true,
+     "security": "WPA2",
+     "width_mhz": 80,
+     "utilisation_pct": null,
+     "stations": null,
+     "associated": false,
+     "own": false
+    }
+   ]
+  },
+  "devices": [
+   {
+    "mac": "02:00:5E:00:00:78",
+    "name": "Office PC",
+    "ip": "192.168.1.40",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:79",
+    "name": "File server (NAS)",
+    "ip": "192.168.1.41",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:7A",
+    "name": "Hall projector",
+    "ip": "192.168.1.42",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:7B",
+    "name": "Livestream encoder",
+    "ip": "192.168.1.43",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:7C",
+    "name": "Front office printer",
+    "ip": "192.168.1.44",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:7D",
+    "name": "Phone system",
+    "ip": "192.168.1.45",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": true,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:7E",
+    "name": "Laptop-Pastor",
+    "ip": "192.168.1.46",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:7F",
+    "name": "Laptop-Office-2",
+    "ip": "192.168.1.47",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:80",
+    "name": "Tablet-Welcome-Desk",
+    "ip": "192.168.1.48",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:81",
+    "name": "Smart TV: Lounge",
+    "ip": "192.168.1.49",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:82",
+    "name": "Camera: Front door",
+    "ip": "192.168.1.50",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:83",
+    "name": "Camera: Parking lot",
+    "ip": "192.168.1.51",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:84",
+    "name": "Thermostat: Hall",
+    "ip": "192.168.1.52",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:85",
+    "name": "Thermostat: Classroom wing",
+    "ip": "192.168.1.53",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:86",
+    "name": "Copier / scanner",
+    "ip": "192.168.1.54",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:87",
+    "name": "Phone-Volunteer-1",
+    "ip": "192.168.1.55",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": true,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:88",
+    "name": "Phone-Volunteer-2",
+    "ip": "192.168.1.56",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": true,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:89",
+    "name": "Phone-Guest-3",
+    "ip": "192.168.1.57",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": true,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:8A",
+    "name": "Laptop-Guest-7",
+    "ip": "192.168.1.58",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:8B",
+    "name": "Sensor-Garden",
+    "ip": "192.168.1.59",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:8C",
+    "name": "Galaxy-Tab",
+    "ip": "192.168.1.60",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": true,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:8D",
+    "name": "Smart speaker",
+    "ip": "192.168.1.61",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:8E",
+    "name": "Game console",
+    "ip": "192.168.1.62",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:8F",
+    "name": "Chromebook-Classroom-1",
+    "ip": "192.168.1.63",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:90",
+    "name": "Chromebook-Classroom-2",
+    "ip": "192.168.1.64",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:00:91",
+    "name": "Door access controller",
+    "ip": "192.168.1.65",
+    "vendor": null,
+    "first_seen": "2025-11-22T12:00:00+00:00",
+    "last_seen": "2026-01-01T11:59:00+00:00",
+    "online": true,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   },
+   {
+    "mac": "02:11:22:33:44:55",
+    "name": null,
+    "ip": "192.168.1.88",
+    "vendor": null,
+    "first_seen": "2026-01-01T09:00:00+00:00",
+    "last_seen": "2026-01-01T11:58:00+00:00",
+    "online": true,
+    "new": true,
+    "random_mac": true,
+    "ssid": null
+   },
+   {
+    "mac": "02:00:5E:00:03:E7",
+    "name": "Old laptop",
+    "ip": "192.168.1.99",
+    "vendor": null,
+    "first_seen": "2025-10-03T12:00:00+00:00",
+    "last_seen": "2025-12-26T12:00:00+00:00",
+    "online": false,
+    "new": false,
+    "random_mac": false,
+    "ssid": null
+   }
   ],
-  "extras": {}
+  "topology": {
+   "vendor": "example",
+   "nodes": [
+    {
+     "name": "Main router",
+     "mac": "02:00:5E:00:00:01",
+     "ip": "192.168.1.1",
+     "model": "Example AX6000",
+     "role": "router",
+     "online": true,
+     "firmware": "3.0.0.4",
+     "backhaul": null,
+     "clients": 14
+    },
+    {
+     "name": "Office switch",
+     "mac": "02:00:5E:00:00:02",
+     "ip": "192.168.1.2",
+     "model": "16-port managed switch",
+     "role": "switch",
+     "online": true,
+     "firmware": "2.6.1",
+     "backhaul": {
+      "type": "wired",
+      "rate_mbps": 1000,
+      "parent": "Main router"
+     },
+     "clients": 11
+    },
+    {
+     "name": "Mesh point: Hall",
+     "mac": "02:00:5E:00:00:03",
+     "ip": "192.168.1.3",
+     "model": "Example AX6000 node",
+     "role": "node",
+     "online": true,
+     "firmware": "3.0.0.4",
+     "backhaul": {
+      "type": "wifi",
+      "band": "5",
+      "rssi": -58,
+      "rate_mbps": 1200,
+      "parent": "Main router"
+     },
+     "clients": 12
+    },
+    {
+     "name": "Mesh point: Classroom wing",
+     "mac": "02:00:5E:00:00:04",
+     "ip": "192.168.1.4",
+     "model": "Example AX6000 node",
+     "role": "node",
+     "online": true,
+     "firmware": "3.0.0.4",
+     "backhaul": {
+      "type": "wifi",
+      "band": "5",
+      "rssi": -74,
+      "rate_mbps": 390,
+      "parent": "Mesh point: Hall"
+     },
+     "clients": 6
+    },
+    {
+     "name": "Access point: Kitchen",
+     "mac": "02:00:5E:00:00:05",
+     "ip": "192.168.1.5",
+     "model": "Ceiling AP (Wi-Fi 6E)",
+     "role": "ap",
+     "online": true,
+     "firmware": "6.6.55",
+     "backhaul": {
+      "type": "wired",
+      "rate_mbps": 1000,
+      "parent": "Office switch"
+     },
+     "clients": 7
+    }
+   ]
+  },
+  "clients": [
+   {
+    "mac": "02:00:5E:00:00:78",
+    "ip": "192.168.1.40",
+    "name": "Office PC",
+    "online": true,
+    "link": {
+     "type": "wired",
+     "node": "Office switch",
+     "rate_mbps": 1000
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:79",
+    "ip": "192.168.1.41",
+    "name": "File server (NAS)",
+    "online": true,
+    "link": {
+     "type": "wired",
+     "node": "Office switch",
+     "rate_mbps": 1000
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:7A",
+    "ip": "192.168.1.42",
+    "name": "Hall projector",
+    "online": true,
+    "link": {
+     "type": "wired",
+     "node": "Office switch",
+     "rate_mbps": 1000
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:7B",
+    "ip": "192.168.1.43",
+    "name": "Livestream encoder",
+    "online": true,
+    "link": {
+     "type": "wired",
+     "node": "Office switch",
+     "rate_mbps": 1000
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:7C",
+    "ip": "192.168.1.44",
+    "name": "Front office printer",
+    "online": true,
+    "link": {
+     "type": "wired",
+     "node": "Office switch",
+     "rate_mbps": 100
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:7D",
+    "ip": "192.168.1.45",
+    "name": "Phone system",
+    "online": true,
+    "link": {
+     "type": "wired",
+     "node": "Office switch",
+     "rate_mbps": 100
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:7E",
+    "ip": "192.168.1.46",
+    "name": "Laptop-Pastor",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Main router",
+     "rssi": -48,
+     "rate_mbps": 1201
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:7F",
+    "ip": "192.168.1.47",
+    "name": "Laptop-Office-2",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "6",
+     "node": "Access point: Kitchen",
+     "rssi": -52,
+     "rate_mbps": 2402
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:80",
+    "ip": "192.168.1.48",
+    "name": "Tablet-Welcome-Desk",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Main router",
+     "rssi": -57,
+     "rate_mbps": 866
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:81",
+    "ip": "192.168.1.49",
+    "name": "Smart TV: Lounge",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Access point: Kitchen",
+     "rssi": -55,
+     "rate_mbps": 433
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:82",
+    "ip": "192.168.1.50",
+    "name": "Camera: Front door",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "2.4",
+     "node": "Mesh point: Hall",
+     "rssi": -63,
+     "rate_mbps": 72
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:83",
+    "ip": "192.168.1.51",
+    "name": "Camera: Parking lot",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "2.4",
+     "node": "Mesh point: Classroom wing",
+     "rssi": -81,
+     "rate_mbps": 26
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:84",
+    "ip": "192.168.1.52",
+    "name": "Thermostat: Hall",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "2.4",
+     "node": "Mesh point: Hall",
+     "rssi": -66,
+     "rate_mbps": 65
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:85",
+    "ip": "192.168.1.53",
+    "name": "Thermostat: Classroom wing",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "2.4",
+     "node": "Mesh point: Classroom wing",
+     "rssi": -71,
+     "rate_mbps": 52
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:86",
+    "ip": "192.168.1.54",
+    "name": "Copier / scanner",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "2.4",
+     "node": "Main router",
+     "rssi": -79,
+     "rate_mbps": 39
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:87",
+    "ip": "192.168.1.55",
+    "name": "Phone-Volunteer-1",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Mesh point: Hall",
+     "rssi": -61,
+     "rate_mbps": 573
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:88",
+    "ip": "192.168.1.56",
+    "name": "Phone-Volunteer-2",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Mesh point: Hall",
+     "rssi": -67,
+     "rate_mbps": 433
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:89",
+    "ip": "192.168.1.57",
+    "name": "Phone-Guest-3",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Access point: Kitchen",
+     "rssi": -69,
+     "rate_mbps": 390
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:8A",
+    "ip": "192.168.1.58",
+    "name": "Laptop-Guest-7",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "2.4",
+     "node": "Mesh point: Classroom wing",
+     "rssi": -84,
+     "rate_mbps": 13
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:8B",
+    "ip": "192.168.1.59",
+    "name": "Sensor-Garden",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "2.4",
+     "node": "Mesh point: Classroom wing",
+     "rssi": -86,
+     "rate_mbps": 6
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:8C",
+    "ip": "192.168.1.60",
+    "name": "Galaxy-Tab",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Mesh point: Hall",
+     "rssi": -59,
+     "rate_mbps": 600
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:8D",
+    "ip": "192.168.1.61",
+    "name": "Smart speaker",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "2.4",
+     "node": "Main router",
+     "rssi": -62,
+     "rate_mbps": 72
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:8E",
+    "ip": "192.168.1.62",
+    "name": "Game console",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "6",
+     "node": "Access point: Kitchen",
+     "rssi": -50,
+     "rate_mbps": 1921
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:8F",
+    "ip": "192.168.1.63",
+    "name": "Chromebook-Classroom-1",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Mesh point: Classroom wing",
+     "rssi": -72,
+     "rate_mbps": 270
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:90",
+    "ip": "192.168.1.64",
+    "name": "Chromebook-Classroom-2",
+    "online": true,
+    "link": {
+     "type": "wifi",
+     "band": "5",
+     "node": "Mesh point: Classroom wing",
+     "rssi": -76,
+     "rate_mbps": 173
+    }
+   },
+   {
+    "mac": "02:00:5E:00:00:91",
+    "ip": "192.168.1.65",
+    "name": "Door access controller",
+    "online": true,
+    "link": {
+     "type": "wired",
+     "node": "Office switch",
+     "rate_mbps": 100
+    }
+   }
+  ],
+  "client_bands": {
+   "wired": 7,
+   "5 GHz": 9,
+   "6 GHz": 2,
+   "2.4 GHz": 8
+  }
+ },
+ "summary": {
+  "total": 35,
+  "up": 28,
+  "down": 1,
+  "warn": 3,
+  "note": 2,
+  "pending": 0,
+  "maintenance": 1,
+  "unknown": 0
+ }
 }
