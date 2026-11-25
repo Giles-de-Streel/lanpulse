@@ -1004,7 +1004,8 @@ function viewHistory(x) {
   ].filter((e) => Date.parse(e.t) >= from && (!q || e.name.toLowerCase().includes(q))).sort((a, b) => b.t.localeCompare(a.t));
 
   // speed tests and newly seen devices in the range
-  const speed = ((x.speed || {}).history || []).filter((r) => Date.parse(r.at) >= from);
+  // Speedtest Tracker times are UTC without a zone marker; tsOf() reads them as UTC
+  const speed = ((x.speed || {}).history || []).map((r) => ({ ...r, at: new Date(tsOf(r.at)).toISOString() })).filter((r) => Date.parse(r.at) >= from);
   const devs = x.devices || [];
   const firstSweep = Math.min(...devs.map((d) => tsOf(d.first_seen)).filter(Boolean));
   const newDevs = devs.filter((d) => !d.this_box && tsOf(d.first_seen) >= from && tsOf(d.first_seen) > firstSweep + 3600_000)
@@ -1012,7 +1013,7 @@ function viewHistory(x) {
 
   const speedSvg = () => {
     const ok = speed.filter((r) => r.ok && r.down_mbps);
-    if (!ok.length) return "";
+    if (ok.length < 3) return "";
     const max = Math.max(...ok.map((r) => r.down_mbps)), w = 600, ht = 90, bw = w / ok.length;
     return `<svg class="speedchart" viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none" role="img" aria-label="Download speed per test">${ok.map((r, i) => {
       const y = ht - (r.down_mbps / max) * (ht - 4);
