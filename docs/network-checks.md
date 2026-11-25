@@ -52,7 +52,9 @@ Forgot the password? On the box: `sudo rm /opt/monitor/config/settings.json && c
 
 ## Detail pages
 
-The **Devices on the network** and **Wi-Fi signal of devices** tiles link to full-page lists
+The **Devices** and **Wi-Fi signal** quick-link buttons under the banner open full-page lists. They are
+not shown as tiles or counted as issues on the dashboard, because both change constantly; the snapshot
+still carries them as low-priority items for other consumers. The pages are
 (`?view=devices`, `?view=wifi`). In a normal browser they open in a new tab; on the wall screen
 they open in place with a Back button and return by themselves after 5 minutes.
 
