@@ -561,15 +561,34 @@ def attach_links(snap):
 # ---------------------------------------------------------------------- settings API
 # A tiny local API the dashboard uses to set up things like the router login, so nobody needs a
 # console. Served only on the box (Caddy forwards /api/* to it, from private addresses only).
-# Rules: saved passwords are write-only (never sent back); changing the router type or address
-# clears the saved password unless a new one is given, so a stored login can't be redirected to
-# another device; LANPULSE_ADMIN_PIN, if set, is required for every change.
+# Rules: every change needs an administrator sign-in (the password is created in the dashboard on
+# first use and stored only as a salted PBKDF2 hash); saved router passwords are write-only (never
+# sent back); changing the router type or address clears the saved password unless a new one is
+# given, so a stored login can't be redirected to another device.
+# Forgotten administrator password: delete the "admin" entry from /opt/monitor/config/settings.json
+# (or the whole file) and restart lanpulse-collector; the dashboard then offers to create a new one.
 
-import threading
+import threading, hashlib, hmac, secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.cookies import SimpleCookie
 
 WAKE = threading.Event()
 _last_test = {"t": 0.0}
+SESSIONS = {}                                   # token -> expiry (epoch); in memory, cleared on restart
+SESSION_HOURS = 12
+_login_fail = {"n": 0, "t": 0.0}
+
+
+def hash_password(pw, salt=None):
+    salt = salt or secrets.token_hex(16)
+    h = hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200_000).hex()
+    return {"salt": salt, "hash": h, "algo": "pbkdf2-sha256-200k"}
+
+
+def check_password(pw, rec):
+    if not rec:
+        return False
+    return hmac.compare_digest(hash_password(pw, rec["salt"])["hash"], rec["hash"])
 
 
 def gateway_ip():
@@ -585,38 +604,109 @@ class SettingsAPI(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         pass
 
-    def _send(self, code, obj):
+    def _send(self, code, obj, cookie=None):
         body = json.dumps(obj).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store")
+        if cookie is not None:
+            self.send_header("Set-Cookie", cookie)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
+    # ---- sessions
+    def _token(self):
+        try:
+            c = SimpleCookie(self.headers.get("Cookie") or "")
+            return c["lp_session"].value if "lp_session" in c else None
+        except Exception:
+            return None
+
+    def _signed_in(self):
+        t = self._token()
+        now = time.time()
+        for k in [k for k, exp in SESSIONS.items() if exp < now]:
+            SESSIONS.pop(k, None)
+        return bool(t and t in SESSIONS)
+
+    def _new_session(self):
+        t = secrets.token_urlsafe(32)
+        SESSIONS[t] = time.time() + SESSION_HOURS * 3600
+        return f"lp_session={t}; Path=/api; HttpOnly; SameSite=Strict; Max-Age={SESSION_HOURS * 3600}"
+
+    def _session_info(self):
+        return {"admin_set": bool(load_settings().get("admin")), "signed_in": self._signed_in()}
+
     def _info(self):
         gw = gateway_ip() or "192.168.1.1"
         types = [{"id": k, **{**v, "url": v["url"].format(gw=gw)}} for k, v in ROUTER_INFO.items()]
-        return {"router": router_status(), "router_types": types, "gateway": gw,
-                "pin_required": bool(os.environ.get("LANPULSE_ADMIN_PIN"))}
+        return {"router": router_status(), "router_types": types, "gateway": gw}
+
+    def _body(self):
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            return json.loads(self.rfile.read(min(n, 65536)) or b"{}")
+        except ValueError:
+            return None
 
     def do_GET(self):
-        if self.path.split("?")[0] == "/api/settings":
-            return self._send(200, self._info())
+        path = self.path.split("?")[0]
+        if path == "/api/session":
+            return self._send(200, self._session_info())
+        if path == "/api/settings":
+            if not self._signed_in():
+                return self._send(401, {"error": "Sign in as administrator first", **self._session_info()})
+            return self._send(200, {**self._info(), **self._session_info()})
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
-        if self.path.split("?")[0] != "/api/router":
-            return self._send(404, {"error": "not found"})
-        try:
-            n = int(self.headers.get("Content-Length") or 0)
-            req = json.loads(self.rfile.read(min(n, 65536)) or b"{}")
-        except ValueError:
+        path = self.path.split("?")[0]
+        req = self._body()
+        if req is None:
             return self._send(400, {"error": "bad request"})
-        pin = os.environ.get("LANPULSE_ADMIN_PIN")
-        if pin and str(req.get("pin", "")) != pin:
+        if path == "/api/admin/setup":                       # first-time: create the admin password
+            s = load_settings()
+            if s.get("admin"):
+                return self._send(409, {"error": "An administrator password already exists. Sign in instead."})
+            pw = str(req.get("password") or "")
+            if len(pw) < 8:
+                return self._send(400, {"error": "Use at least 8 characters"})
+            s["admin"] = hash_password(pw)
+            save_settings(s)
+            log("administrator password created from the dashboard")
+            return self._send(200, {"ok": True, "admin_set": True, "signed_in": True}, cookie=self._new_session())
+        if path == "/api/login":
+            if _login_fail["n"] >= 5 and time.time() - _login_fail["t"] < 60:
+                return self._send(429, {"error": "Too many wrong tries. Wait a minute and try again."})
+            if check_password(str(req.get("password") or ""), load_settings().get("admin")):
+                _login_fail["n"] = 0
+                return self._send(200, {"ok": True, "admin_set": True, "signed_in": True}, cookie=self._new_session())
+            _login_fail.update(n=_login_fail["n"] + 1, t=time.time())
             time.sleep(1)
-            return self._send(403, {"error": "Wrong PIN"})
+            return self._send(403, {"error": "That password isn't right"})
+        if path == "/api/logout":
+            SESSIONS.pop(self._token(), None)
+            return self._send(200, {"ok": True, "signed_in": False},
+                              cookie="lp_session=; Path=/api; HttpOnly; SameSite=Strict; Max-Age=0")
+        if path == "/api/admin/password":                    # change the admin password (signed in)
+            if not self._signed_in():
+                return self._send(401, {"error": "Sign in as administrator first"})
+            if not check_password(str(req.get("current") or ""), load_settings().get("admin")):
+                time.sleep(1)
+                return self._send(403, {"error": "The current password isn't right"})
+            pw = str(req.get("password") or "")
+            if len(pw) < 8:
+                return self._send(400, {"error": "Use at least 8 characters"})
+            s = load_settings()
+            s["admin"] = hash_password(pw)
+            save_settings(s)
+            SESSIONS.clear()
+            return self._send(200, {"ok": True}, cookie=self._new_session())
+        if path != "/api/router":
+            return self._send(404, {"error": "not found"})
+        if not self._signed_in():
+            return self._send(401, {"error": "Sign in as administrator first"})
         action = req.get("action", "save")
         if action == "remove":
             s = load_settings()

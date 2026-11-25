@@ -130,3 +130,12 @@ button:disabled { opacity: .6; cursor: wait; }
 .pill-link { text-decoration: none; }
 .tile:target { outline: 3px solid var(--pending); outline-offset: 2px; }
 html { scroll-behavior: smooth; }
+
+/* administrator sign-in */
+#admin-bar { display: inline-flex; align-items: center; gap: .5rem; }
+#admin-bar .who { font-weight: 600; color: var(--text); }
+a.button { display: inline-block; text-decoration: none; border-radius: 10px; padding: .55rem 1rem; }
+a.button.ghost { color: var(--muted); border: 1px solid var(--line); }
+.foot-right { display: inline-flex; gap: 1.2rem; align-items: center; }
+body.kiosk footer a.admin-link { display: inline; color: var(--muted); font-size: .85rem; opacity: .75; }
+body.kiosk footer a.admin-link[hidden] { display: none; }

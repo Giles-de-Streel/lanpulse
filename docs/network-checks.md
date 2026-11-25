@@ -26,7 +26,7 @@ For trustworthy results, plug the box into the main router with a cable. A Wi-Fi
 
 ## router adapters (optional, need a router login)
 
-**Easiest:** open the dashboard on the local network and use **Connect your router** (choose the type, enter the password, Test, Save). It is saved in `/opt/monitor/config/settings.json` (root-only, never served or shown again) and takes priority over `lanpulse.env`. Set `LANPULSE_ADMIN_PIN` in `lanpulse.env` to require a PIN for changes. The form only works from private addresses and is hidden on the wall-screen (kiosk) view and on GitHub Pages.
+**Easiest:** open the dashboard on the local network, sign in as administrator (the wall screen has an "Administrator sign-in" link at the bottom; the first visit creates the password) and use **Connect your router** (choose the type, enter the password, Test, Save). It is saved in `/opt/monitor/config/settings.json` (root-only, never served or shown again) and takes priority over `lanpulse.env`. The form only works from private addresses and is hidden on the wall-screen (kiosk) view and on GitHub Pages.
 
 Alternatively set `ROUTER_TYPE`, `ROUTER_URL`, `ROUTER_USER` and `ROUTER_PASS` in `lanpulse.env` (root-only file). The adapter adds:
 
@@ -42,3 +42,9 @@ Alternatively set `ROUTER_TYPE`, `ROUTER_URL`, `ROUTER_USER` and `ROUTER_PASS` i
 | `tmobile` | T-Mobile Home Internet gateways (Arcadyan, Sagemcom, Nokia), local /TMI/v1 API, admin password from the T-Mobile app | |
 
 Adding another: write `router_<name>(url, user, pw)` in `collector.py` that returns the normal form documented above `ROUTERS`, and add it to `ROUTERS`. Good candidates: TP-Link Omada, eero (cloud API), MikroTik (REST), Netgear Orbi, pfSense/OPNsense, and SNMP for managed switches (LLDP neighbours, port speed).
+
+## Administrator sign-in
+
+Settings changes (such as the router connection) need an administrator sign-in. The first time anyone signs in on a box, the dashboard asks them to create the administrator password (at least 8 characters). Only a salted PBKDF2 hash is stored, in `/opt/monitor/config/settings.json`. Sessions last 12 hours; sign-ins started from the wall screen return to it after 10 minutes without use. After 5 wrong passwords, sign-in pauses for a minute.
+
+Forgot the password? On the box: `sudo rm /opt/monitor/config/settings.json && cd /opt/monitor && sudo docker compose restart lanpulse-collector`. This also removes the saved router login, so you'd reconnect the router afterwards.

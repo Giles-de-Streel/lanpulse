@@ -284,15 +284,93 @@ if ("serviceWorker" in navigator && !KIOSK) navigator.serviceWorker.register("sw
 // The box serves a small settings API at /api. On GitHub Pages or any other host there is none,
 // so this section simply stays hidden.
 let BOX = null;
+let SESSION = null;                  // {admin_set, signed_in} when this page is served by a box
+const FROM_KIOSK = params.get("from") === "kiosk";
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { cache: "no-store", credentials: "same-origin", ...opts,
+    headers: opts.body ? { "Content-Type": "application/json" } : undefined });
+  if (!(r.headers.get("content-type") || "").includes("json")) throw new Error("no settings API here");
+  return [r, await r.json()];
+}
 
 async function loadBoxSettings() {
-  if (KIOSK) return;
   try {
-    const r = await fetch("api/settings", { cache: "no-store" });
-    if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) return;
-    BOX = await r.json();
-    renderSetup();
-  } catch { /* no API here */ }
+    const [, s] = await api("api/session");
+    SESSION = s;
+  } catch { SESSION = null; }               // GitHub Pages or another host: no admin features
+  // wall screen: only a quiet sign-in link
+  $("#admin-link").hidden = !(KIOSK && SESSION);
+  if (KIOSK || !SESSION) { $("#setup").hidden = true; $("#admin-bar").hidden = true; return; }
+  renderAdminBar();
+  if (SESSION.signed_in) {
+    try {
+      const [r, j] = await api("api/settings");
+      if (r.ok) { BOX = j; renderSetup(); }
+    } catch { /* ignore */ }
+  } else {
+    BOX = null;
+    $("#setup").hidden = true;
+    if (params.has("admin") && !$("#signin-dialog").open && !loadBoxSettings.asked) {
+      loadBoxSettings.asked = true;
+      openSignIn();
+    }
+  }
+}
+
+function renderAdminBar() {
+  const bar = $("#admin-bar");
+  const back = FROM_KIOSK ? `<a class="button ghost" href="./?kiosk">Back to wall screen</a>` : "";
+  bar.innerHTML = SESSION.signed_in
+    ? `<span class="who">Administrator</span> <button id="signout" class="ghost">Sign out</button> ${back}`
+    : `<button id="signin" class="ghost">Administrator sign-in</button> ${back}`;
+  bar.hidden = false;
+  $("#signout")?.addEventListener("click", async () => {
+    await api("api/logout", { method: "POST", body: "{}" });
+    if (FROM_KIOSK) location.href = "./?kiosk"; else loadBoxSettings();
+  });
+  $("#signin")?.addEventListener("click", openSignIn);
+}
+
+function openSignIn() {
+  const first = !SESSION.admin_set;
+  $("#si-title").textContent = first ? "Create the administrator password" : "Administrator sign-in";
+  $("#si-help").textContent = first
+    ? "No administrator password has been set on this box yet. Choose one (at least 8 characters). It is needed to change settings such as the router connection. Only a scrambled (hashed) copy is stored on the box."
+    : "Sign in to change settings such as the router connection.";
+  $("#si-confirm-wrap").hidden = !first;
+  $("#si-go").textContent = first ? "Create and sign in" : "Sign in";
+  $("#si-pass").value = $("#si-confirm").value = "";
+  $("#si-pass").autocomplete = first ? "new-password" : "current-password";
+  $("#si-result").hidden = true;
+  $("#signin-dialog").showModal();
+  $("#si-pass").focus();
+}
+
+$("#signin-form").addEventListener("submit", async (e) => {
+  if (e.submitter && e.submitter.value === "cancel") return;
+  e.preventDefault();
+  const first = !SESSION.admin_set, pw = $("#si-pass").value, out = $("#si-result");
+  const say = (m) => { out.hidden = false; out.className = "result bad"; out.textContent = m; };
+  if (first && pw !== $("#si-confirm").value) return say("The two passwords don't match.");
+  if (first && pw.length < 8) return say("Use at least 8 characters.");
+  try {
+    const [r, j] = await api(first ? "api/admin/setup" : "api/login", { method: "POST", body: JSON.stringify({ password: pw }) });
+    if (!r.ok) return say(j.error || `Failed (HTTP ${r.status})`);
+    $("#signin-dialog").close();
+    await loadBoxSettings();
+  } catch (err) { say(`Couldn't reach the box: ${err.message}`); }
+});
+
+// Opened from the wall screen: go back there after 10 minutes without use, so it's never left signed in.
+if (FROM_KIOSK) {
+  let idle;
+  const arm = () => { clearTimeout(idle); idle = setTimeout(async () => {
+    try { await api("api/logout", { method: "POST", body: "{}" }); } catch {}
+    location.href = "./?kiosk";
+  }, 10 * 60_000); };
+  ["pointerdown", "keydown", "scroll"].forEach((ev) => addEventListener(ev, arm, { passive: true }));
+  arm();
 }
 
 function renderSetup() {
@@ -338,7 +416,6 @@ function openRouterDialog() {
   $("#r-pass").value = "";
   $("#r-pass").type = "password";
   $("#r-pass").placeholder = st.has_password ? "Saved. Leave empty to keep it" : "";
-  $("#r-pin-wrap").hidden = !BOX.pin_required;
   $("#r-remove").hidden = !st.type || st.type === "none";
   $("#r-result").hidden = true;
   $("#r-show").onclick = () => { const p = $("#r-pass"); p.type = p.type === "password" ? "text" : "password"; $("#r-show").textContent = p.type === "password" ? "Show" : "Hide"; };
@@ -351,7 +428,7 @@ function openRouterDialog() {
 async function routerAction(action) {
   const out = $("#r-result");
   const body = { action, type: $("#r-type").value, url: $("#r-url").value.trim(), user: $("#r-user").value.trim(),
-                 password: $("#r-pass").value, pin: $("#r-pin").value };
+                 password: $("#r-pass").value };
   if (action !== "remove" && (!body.type || !body.url)) { show("Choose the router type and enter its address.", false); return; }
   for (const b of $("#router-form").querySelectorAll("button")) b.disabled = true;
   show(action === "remove" ? "Disconnecting…" : "Connecting to the router…", null);
