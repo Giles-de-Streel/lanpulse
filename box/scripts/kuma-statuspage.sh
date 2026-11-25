@@ -18,7 +18,7 @@ getenv() { { grep "^$1=" "$ENV" 2>/dev/null || true; } | cut -d= -f2- | sed 's/^
 [ -n "${2:-}" ] && setenv STATUS_DESC "$2"
 TITLE=$(getenv STATUS_TITLE); TITLE=${TITLE:-Network status}
 DESC=$(getenv STATUS_DESC)
-DESC=${DESC:-Green means working. Red means not responding. If something stays red for more than 10 minutes, let the network volunteer know.}
+DESC=${DESC:-Green means working. Red means not responding.}
 q() { printf "%s" "$1" | sed "s/'/''/g"; }
 
 CSS='.title-flex{justify-content:center} .monitor-list .item .info{font-size:1.25rem} .description{font-size:1.15rem;text-align:center}'
