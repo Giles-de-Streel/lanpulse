@@ -103,3 +103,19 @@ th { color: var(--muted); font-weight: 600; }
 .speedchart rect:hover { opacity: 1; }
 .speedchart .median { stroke: var(--pending); stroke-width: 2; stroke-dasharray: 6 4; }
 .facts li.weak { font-weight: 600; }
+
+/* router setup card + dialog */
+.setup { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 1.6rem;
+         padding: 1rem 1.2rem; border-radius: var(--radius); background: var(--card); border: 1px solid var(--line); }
+.setup.invite { border-left: 6px solid #0f766e; }
+.setup.problem { border-left: 6px solid var(--pending); background: var(--pending-bg); }
+.setup.ok { border-left: 6px solid var(--up); }
+.setup button { white-space: nowrap; }
+.pw { display: flex; gap: .4rem; margin-top: .3rem; }
+.pw input { margin-top: 0 !important; flex: 1; }
+.result { padding: .6rem .8rem; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); }
+.result.good { border-color: var(--up); background: var(--up-bg); }
+.result.bad { border-color: var(--down); background: var(--down-bg); }
+menu .spacer { flex: 1; }
+button.danger { color: var(--down); border-color: var(--down); }
+button:disabled { opacity: .6; cursor: wait; }
