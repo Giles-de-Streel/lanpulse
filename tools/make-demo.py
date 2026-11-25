@@ -196,7 +196,7 @@ for k in range(42):
 
 devices = []
 for c in clients:
-    devices.append({"mac": c["mac"], "name": c["name"], "ip": c["ip"], "vendor": None, "first_seen": ago(days=40),
+    devices.append({"mac": c["mac"], "name": c["name"], "ip": c["ip"], "vendor": None, "first_seen": ago(hours=5) if c["name"] == "Galaxy-Tab" else ago(days=40),
                     "last_seen": ago(minutes=1), "online": True, "new": c["name"] == "Galaxy-Tab", "random_mac": c["name"].startswith("Phone"), "ssid": None})
 devices.append({"mac": "02:11:22:33:44:55", "name": None, "ip": "192.168.1.88", "vendor": None, "first_seen": ago(hours=3),
                 "last_seen": ago(minutes=2), "online": True, "new": True, "random_mac": True, "ssid": None})
