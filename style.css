@@ -141,3 +141,22 @@ a.button.ghost { color: var(--muted); border: 1px solid var(--line); }
 /* wall screen: small sign-in link, top right */
 body.kiosk header a.admin-link { display: inline; font-size: .78rem; color: var(--muted); opacity: .8;
   border: 1px solid var(--line); border-radius: 99px; padding: .15rem .6rem; text-decoration: none; }
+
+/* admin view */
+body.admin-view #admin-bar { display: none !important; }
+#admin-panel { margin-bottom: 1.5rem; }
+.admin-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.admin-head h2 { margin: .4rem 0; font-size: 1.4rem; }
+.admin-actions { display: flex; gap: .5rem; }
+a.button:not(.ghost) { background: #0f766e; color: #fff; }
+.admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: .8rem; margin-top: .6rem; }
+.admin-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.1rem; }
+.admin-card h3 { margin: 0 0 .6rem; font-size: 1.05rem; }
+.admin-card .setup { margin-top: 0; border: 0; padding: 0; background: transparent; flex-wrap: wrap; }
+.admin-card label { display: block; margin: .5rem 0; font-weight: 600; font-size: .9rem; }
+.admin-card input { display: block; width: 100%; margin-top: .25rem; font: inherit; padding: .5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.tools { display: grid; gap: .5rem; }
+.toolcard { display: block; padding: .6rem .8rem; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--text); }
+.toolcard:hover { border-color: #0f766e; }
+.toolcard span { display: block; color: var(--muted); font-size: .85rem; }
+.live-head { font-size: 1.15rem; margin: 1.6rem 0 .6rem; }
