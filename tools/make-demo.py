@@ -226,6 +226,73 @@ extras = {
     "client_bands": bands,
 }
 
+
+# ---------------------------------------------------------------- history (History page)
+# invented outages: (item name, start minutes ago, duration minutes or None = still down, message)
+OUTAGES = [
+    ("Internet connection", 3 * 1440 + 130, 14, "Request timed out"),
+    ("Internet connection", 12 * 1440 + 600, 47, "Request timed out"),
+    ("Websites load", 3 * 1440 + 128, 11, "getaddrinfo EAI_AGAIN"),
+    ("Camera: Parking lot", 6 * 1440 + 300, 125, "Host unreachable"),
+    ("Front office printer", 1440 + 200, 6, "Request timed out"),
+    ("Front office printer", 4 * 1440 + 50, 9, "Request timed out"),
+    ("Front office printer", 9 * 1440 + 700, 4, "Request timed out"),
+    ("Mesh point: Hall", 20 * 1440 + 90, 32, "Host unreachable"),
+]
+T0s = int(T0.timestamp())
+mins = lambda m: T0 - datetime.timedelta(minutes=m)
+
+
+def buckets(outs, step, n):
+    """up/down check counts per bucket (one check a minute), Kuma-style [start_ts, up, down]."""
+    end = T0s // step * step
+    rows = []
+    for k in range(n - 1, -1, -1):
+        a = end - k * step
+        b = min(a + step, T0s)
+        total = max(0, (b - a) // 60)
+        down = 0
+        for s, e in outs:
+            down += max(0, (min(b, e) - max(a, s)) // 60)
+        rows.append([a, total - down, down])
+    return rows
+
+
+history_monitors, history_events = [], []
+for g in groups:
+    for it in g["items"]:
+        if it.get("kind") == "netcheck":
+            continue
+        outs, olist = [], []
+        for name, start, dur, msg in OUTAGES:
+            if name != it["name"]:
+                continue
+            s = T0s - start * 60
+            e = s + dur * 60
+            outs.append((s, e))
+            olist.append([iso(mins(start)), iso(mins(start - dur)), dur * 60])
+            history_events.append({"t": iso(mins(start)), "id": it["id"], "name": it["name"], "s": "down", "msg": msg})
+            history_events.append({"t": iso(mins(start - dur)), "id": it["id"], "name": it["name"], "s": "up", "msg": "", "dur_s": dur * 60})
+        if it["status"] == "down":                       # still down now
+            since = 12
+            outs.append((T0s - since * 60, T0s))
+            olist.append([iso(mins(since)), None, since * 60])
+            history_events.append({"t": iso(mins(since)), "id": it["id"], "name": it["name"], "s": "down", "msg": it.get("message") or "Request timed out"})
+        history_monitors.append({"id": it["id"], "name": it["name"], "daily": buckets(outs, 86400, 30),
+                                 "hourly": buckets(outs, 3600, 48), "outages": olist})
+history_events.sort(key=lambda e: e["t"])
+extras["history"] = {
+    "from": ago(days=45), "monitors": history_monitors, "events": history_events,
+    "changes": [
+        {"t": ago(days=2, hours=5), "id": "net-speed", "name": "Internet speed", "s": "warn", "from": "up",
+         "msg": "Two tests in a row well below normal: 61 Mbps vs usual 312"},
+        {"t": ago(days=2, hours=1), "id": "net-speed", "name": "Internet speed", "s": "up", "from": "warn", "msg": "Back to normal: 298 Mbps"},
+        {"t": ago(days=8), "id": "net-publicip", "name": "Public IP address", "s": "warn", "from": "up",
+         "msg": "Public IP changed (the provider assigned a new one)"},
+        {"t": ago(days=7, hours=23), "id": "net-publicip", "name": "Public IP address", "s": "up", "from": "warn", "msg": ""},
+    ],
+}
+
 snap = {"schema": "lanpulse.snapshot/1", "generated": iso(T0), "sources": [{"name": "demo", "ok": True}],
         "site": {"name": "Example Site",
                  "description": "Sample data. Green means working, amber means worth a look, red means not responding."},
