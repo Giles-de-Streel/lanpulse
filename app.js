@@ -54,8 +54,10 @@ function render(snap) {
   $("#site-desc").textContent = site.description || "";
 
   const sum = snap.summary || {};
+  const isNote = (i) => i.status === "warn" && i.priority === "low";
   const bad = (sum.down || 0);
   const look = (sum.warn || 0);
+  const notes = (snap.groups || []).flatMap((g) => g.items.filter(isNote));
   const warn = (sum.pending || 0) + (sum.unknown || 0);
   const banner = $("#banner");
   banner.className = "banner " + (bad ? "down" : look || warn ? "pending" : "up");
@@ -63,9 +65,10 @@ function render(snap) {
     ? `${bad} ${bad === 1 ? "thing needs" : "things need"} attention`
     : look ? `Working: ${look} ${look === 1 ? "thing" : "things"} to look at when convenient`
     : warn ? "Checking a few things…" : "Everything is working";
-  $("#banner-sub").textContent = `${sum.up || 0} of ${sum.total || 0} working` + (look && bad ? ` · ${look} to look at` : "");
-  // name each problem in the banner, with its details and a link to its tile
-  const flagged = (snap.groups || []).flatMap((g) => g.items.filter((i) => i.status === "down" || i.status === "warn")
+  $("#banner-sub").innerHTML = esc(`${(sum.up || 0) + notes.length} of ${sum.total || 0} working` + (look && bad ? ` · ${look} to look at` : "")) +
+    (notes.length ? ` · <a href="#tile-${esc(notes[0].id)}">${notes.length} ${notes.length === 1 ? "note" : "notes"} further down</a> <span class="help">(${esc(notes.map((n) => n.name).join(", "))})</span>` : "");
+  // name each real problem in the banner (not the lower-priority notes), with details and a link to its tile
+  const flagged = (snap.groups || []).flatMap((g) => g.items.filter((i) => (i.status === "down" || i.status === "warn") && !isNote(i))
     .map((i) => ({ ...i, group: g.name })));
   const list = $("#banner-list");
   list.innerHTML = flagged.slice(0, 8).map((i) =>
@@ -77,18 +80,19 @@ function render(snap) {
   for (const g of snap.groups || []) {
     const sec = document.createElement("section");
     const gBad = g.items.filter((i) => i.status === "down").length;
-    const gLook = g.items.filter((i) => i.status === "warn").length;
+    const gLook = g.items.filter((i) => i.status === "warn" && !isNote(i)).length;
+    const gNote = g.items.filter(isNote).length;
     sec.className = "group";
-    const firstFlag = g.items.find((i) => i.status === "down") || g.items.find((i) => i.status === "warn");
-    const pills = `${gBad ? `<span class="pill down">${gBad} down</span>` : ""}${gLook ? `<span class="pill warn">${gLook} to look at</span>` : ""}`;
+    const firstFlag = g.items.find((i) => i.status === "down") || g.items.find((i) => i.status === "warn" && !isNote(i)) || g.items.find(isNote);
+    const pills = `${gBad ? `<span class="pill down">${gBad} down</span>` : ""}${gLook ? `<span class="pill warn">${gLook} to look at</span>` : ""}${gNote ? `<span class="pill note">${gNote} ${gNote === 1 ? "note" : "notes"}</span>` : ""}`;
     sec.innerHTML = `<h2>${esc(g.name)} ${firstFlag && pills ? `<a class="pill-link" href="#tile-${esc(firstFlag.id)}">${pills}</a>` : ""}</h2><div class="tiles"></div>`;
     const tiles = $(".tiles", sec);
-    // problems first, then things to look at, then original order
-    const rank = (s) => (s === "down" ? 0 : s === "warn" ? 1 : 2);
-    const items = [...g.items].sort((a, b) => rank(a.status) - rank(b.status));
+    // problems first, then things to look at, then working, then lower-priority notes
+    const rank = (i) => (i.status === "down" ? 0 : isNote(i) ? 3 : i.status === "warn" ? 1 : 2);
+    const items = [...g.items].sort((a, b) => rank(a) - rank(b));
     for (const i of items) {
       const t = document.createElement("article");
-      t.className = `tile ${i.status}${i.note ? " has-note" : ""}`;
+      t.className = `tile ${i.status}${i.note ? " has-note" : ""}${isNote(i) ? " low" : ""}`;
       t.id = `tile-${i.id}`;
       t.title = i.message || "";
       const bars = (i.history || []).slice(-30).map((h) => `<i class="${h.s}"></i>`).join("");
@@ -192,7 +196,7 @@ function renderDetails(x) {
     const lvl = { clear: "clear", light: "light", moderate: `<span class="chip warn">moderate</span>`, heavy: `<span class="weak">heavy</span>` };
     const chanRows = (a.channels || []).map((c) => [`${c.band} GHz`, c.channel, c.yours ? "★" : "", c.networks,
       c.band === "2.4" ? c.overlapping : "–", dbm(c.strongest_dbm), c.utilisation_pct != null ? `${c.utilisation_pct}%` : "", lvl[c.congestion] || c.congestion]);
-    const apRows = (a.networks || []).map((n) => [n.own ? "★" : "", esc(n.ssid || (n.own_hidden ? "(hidden, yours)" : "(hidden)")), esc(n.bssid),
+    const apRows = (a.networks || []).map((n) => [n.own ? "★" : "", esc(n.ssid || (n.own_hidden ? "(hidden, yours)" : "(hidden)")) + (n.own_extra && n.ssid ? " (guest/extra, yours)" : ""), esc(n.bssid),
       `${n.band} GHz`, n.channel, n.width_mhz ? `${n.width_mhz} MHz` : "", dbm(n.signal_dbm),
       n.utilisation_pct != null ? `${n.utilisation_pct}%` : "", n.stations ?? "", sec(n.security)]);
     const can6 = (a.adapter_bands || []).includes("6");
