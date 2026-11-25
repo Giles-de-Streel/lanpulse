@@ -137,11 +137,7 @@ html { scroll-behavior: smooth; }
 a.button { display: inline-block; text-decoration: none; border-radius: 10px; padding: .55rem 1rem; }
 a.button.ghost { color: var(--muted); border: 1px solid var(--line); }
 .foot-right { display: inline-flex; gap: 1.2rem; align-items: center; }
-body.kiosk footer a.admin-link { display: inline; color: var(--muted); font-size: .85rem; opacity: .75; }
-body.kiosk footer a.admin-link[hidden] { display: none; }
 
-/* wall screen: keep the sign-in link visible without scrolling */
-body.kiosk footer a.admin-link { position: fixed; right: 1rem; bottom: .8rem; z-index: 10; opacity: .9;
-  background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: .35rem .9rem;
-  text-decoration: none; box-shadow: 0 1px 4px rgb(0 0 0 / .08); }
-body.kiosk main { padding-bottom: 3rem; }
+/* wall screen: small sign-in link, top right */
+body.kiosk header a.admin-link { display: inline; font-size: .78rem; color: var(--muted); opacity: .8;
+  border: 1px solid var(--line); border-radius: 99px; padding: .15rem .6rem; text-decoration: none; }
