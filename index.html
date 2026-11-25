@@ -21,6 +21,7 @@
     </div>
     <div class="right">
       <span id="updated"></span>
+      <span id="admin-bar" hidden></span>
       <button id="open-settings" class="ghost" aria-label="Settings" title="Data source settings">⚙</button>
     </div>
   </header>
@@ -42,8 +43,30 @@
 
   <footer>
     <span class="legend"><i class="up"></i>Working <i class="pending"></i>Needs a look / checking <i class="down"></i>Not responding</span>
-    <a href="https://github.com/Giles-de-Streel/lanpulse" target="_blank" rel="noopener">lanpulse</a>
+    <span class="foot-right">
+      <a id="admin-link" class="admin-link" href="./?admin&amp;from=kiosk" hidden>Administrator sign-in</a>
+      <a class="project" href="https://github.com/Giles-de-Streel/lanpulse" target="_blank" rel="noopener">lanpulse</a>
+    </span>
   </footer>
+
+  <dialog id="signin-dialog">
+    <form id="signin-form" method="dialog" autocomplete="off">
+      <h2 id="si-title">Administrator sign-in</h2>
+      <p id="si-help" class="help"></p>
+      <label>Password
+        <input id="si-pass" type="password" autocomplete="current-password" spellcheck="false">
+      </label>
+      <label id="si-confirm-wrap" hidden>Type it again
+        <input id="si-confirm" type="password" autocomplete="new-password" spellcheck="false">
+      </label>
+      <p id="si-result" class="result" hidden></p>
+      <menu>
+        <span class="spacer"></span>
+        <button value="cancel" class="ghost" formnovalidate id="si-cancel">Cancel</button>
+        <button type="submit" id="si-go" value="default">Sign in</button>
+      </menu>
+    </form>
+  </dialog>
 
   <dialog id="settings">
     <form method="dialog">
@@ -77,9 +100,6 @@
       </label>
       <label>Password
         <span class="pw"><input id="r-pass" type="password" autocomplete="new-password" spellcheck="false"><button type="button" id="r-show" class="ghost">Show</button></span>
-      </label>
-      <label id="r-pin-wrap" hidden>Box admin PIN
-        <input id="r-pin" type="password" inputmode="numeric" autocomplete="off">
       </label>
       <p id="r-result" class="result" hidden></p>
       <menu>
