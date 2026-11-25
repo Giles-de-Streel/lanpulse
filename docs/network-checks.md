@@ -26,7 +26,9 @@ For trustworthy results, plug the box into the main router with a cable. A Wi-Fi
 
 ## router adapters (optional, need a router login)
 
-Set `ROUTER_TYPE`, `ROUTER_URL`, `ROUTER_USER` and `ROUTER_PASS` in `lanpulse.env` (root-only file). The adapter adds:
+**Easiest:** open the dashboard on the local network and use **Connect your router** (choose the type, enter the password, Test, Save). It is saved in `/opt/monitor/config/settings.json` (root-only, never served or shown again) and takes priority over `lanpulse.env`. Set `LANPULSE_ADMIN_PIN` in `lanpulse.env` to require a PIN for changes. The form only works from private addresses and is hidden on the wall-screen (kiosk) view and on GitHub Pages.
+
+Alternatively set `ROUTER_TYPE`, `ROUTER_URL`, `ROUTER_USER` and `ROUTER_PASS` in `lanpulse.env` (root-only file). The adapter adds:
 
 - a **Network equipment** group: each router, mesh node, AP or switch, with its backhaul or uplink (wired, or Wi-Fi band and signal), flagged when the signal is weak;
 - `link` on each dashboard tile whose monitor target matches a router client: `Wired`, or `5 GHz · Hall node · -61 dBm · 433 Mbps`;
