@@ -107,7 +107,8 @@ def source_netcheck():
     stale = age > 30 * 60
     items = [{"id": f"net-{c['id']}", "name": c["name"], "kind": "netcheck",
               "status": "unknown" if stale else c["status"],
-              "note": ("(out of date) " if stale else "") + c["summary"], "message": c["summary"]}
+              "note": ("(out of date) " if stale else "") + c["summary"], "message": c["summary"],
+              "hint": c.get("hint")}
              for c in rep.get("checks", [])]
     extras = dict(rep.get("extras", {}))
     extras["netcheck"] = {"generated": rep["generated"], "interface": rep.get("interface"),

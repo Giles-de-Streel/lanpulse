@@ -687,6 +687,26 @@ def check_devices(state):
                   online=len(online), total=len(devs), new=len(new)), {"devices": devs}
 
 
+# What to do, in plain words, when a check isn't green. Shown on the tile and in the banner.
+HINTS = {
+    "devices": "If you recognise them, there's nothing to do: they stop counting as new after 24 hours. "
+               "If not, look them up in the device finder (NetAlertX, port 20211) or the router's device list.",
+    "dhcp": "Find the device at that address and turn off its DHCP server, or switch it to access point (bridge) mode.",
+    "nat": "Put the second router into access point / bridge mode (or the provider's modem into bridge mode), "
+           "so there is only one router.",
+    "upnp": "Check you recognise the devices listed. If nothing needs to be reachable from the internet, "
+            "turn off UPnP in the router's settings.",
+    "loss-gw": "Restart the router. If the box is on Wi-Fi, a cable gives a fairer reading.",
+    "loss-net": "Usually the internet provider. Restart the modem/router; if it continues, contact the provider.",
+    "dns": "Restart the router. If it keeps happening, set the router's DNS to 1.1.1.1 or 9.9.9.9.",
+    "airspace": "Change the Wi-Fi channel in the router's settings (or set it to automatic). "
+                "The Wi-Fi airspace details below show which channels are clearest.",
+    "uplink": "Move the gateway near a window or higher up. Frequent restarts can mean power or overheating problems.",
+    "speed": "Wait for the next test. If it stays slow, restart the gateway, then contact the provider.",
+    "publicip": "",
+}
+
+
 # ------------------------------------------------------------------ main
 
 def main():
@@ -733,6 +753,9 @@ def main():
     exposure = {"upnp": upnp, "public_ip": next((c["detail"].get("ip") for c in checks if c["id"] == "publicip"), None),
                 "nat": next((c["summary"] for c in checks if c["id"] == "nat"), None)}
     extras["exposure"] = exposure
+    for c in checks:
+        if c["status"] in ("warn", "down") and c["id"] in HINTS:
+            c["hint"] = HINTS[c["id"]]
     report = {"generated": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
               "interface": dev, "interface_kind": iface_kind(dev), "gateway": gw, "checks": checks,
               "extras": extras}

@@ -63,6 +63,13 @@ function render(snap) {
     : look ? `Working: ${look} ${look === 1 ? "thing" : "things"} to look at when convenient`
     : warn ? "Checking a few things…" : "Everything is working";
   $("#banner-sub").textContent = `${sum.up || 0} of ${sum.total || 0} working` + (look && bad ? ` · ${look} to look at` : "");
+  // name each problem in the banner, with its details and a link to its tile
+  const flagged = (snap.groups || []).flatMap((g) => g.items.filter((i) => i.status === "down" || i.status === "warn")
+    .map((i) => ({ ...i, group: g.name })));
+  const list = $("#banner-list");
+  list.innerHTML = flagged.slice(0, 8).map((i) =>
+    `<li class="${i.status}"><a href="#tile-${esc(i.id)}"><b>${esc(i.name)}</b></a>${i.note || i.message ? `: ${esc(i.note || i.message)}` : ` (${esc(i.group)})`}${i.hint ? `<br><span class="hint">${esc(i.hint)}</span>` : ""}</li>`).join("");
+  list.hidden = !flagged.length;
 
   const groups = $("#groups");
   groups.innerHTML = "";
@@ -71,7 +78,9 @@ function render(snap) {
     const gBad = g.items.filter((i) => i.status === "down").length;
     const gLook = g.items.filter((i) => i.status === "warn").length;
     sec.className = "group";
-    sec.innerHTML = `<h2>${esc(g.name)} ${gBad ? `<span class="pill down">${gBad} down</span>` : ""}${gLook ? `<span class="pill warn">${gLook} to look at</span>` : ""}</h2><div class="tiles"></div>`;
+    const firstFlag = g.items.find((i) => i.status === "down") || g.items.find((i) => i.status === "warn");
+    const pills = `${gBad ? `<span class="pill down">${gBad} down</span>` : ""}${gLook ? `<span class="pill warn">${gLook} to look at</span>` : ""}`;
+    sec.innerHTML = `<h2>${esc(g.name)} ${firstFlag && pills ? `<a class="pill-link" href="#tile-${esc(firstFlag.id)}">${pills}</a>` : ""}</h2><div class="tiles"></div>`;
     const tiles = $(".tiles", sec);
     // problems first, then things to look at, then original order
     const rank = (s) => (s === "down" ? 0 : s === "warn" ? 1 : 2);
@@ -79,6 +88,7 @@ function render(snap) {
     for (const i of items) {
       const t = document.createElement("article");
       t.className = `tile ${i.status}${i.note ? " has-note" : ""}`;
+      t.id = `tile-${i.id}`;
       t.title = i.message || "";
       const bars = (i.history || []).slice(-30).map((h) => `<i class="${h.s}"></i>`).join("");
       const meta = `${LABEL[i.status] || i.status}${i.status === "down" && i.since ? ` · since ${ago(i.since)}` : ""}${i.latency_ms != null && i.status === "up" ? ` · ${Math.round(i.latency_ms)} ms` : ""}`;
@@ -87,6 +97,7 @@ function render(snap) {
         <div class="body">
           <div class="name">${esc(i.name)}</div>
           <div class="meta">${i.note ? esc(i.note) : meta}</div>
+          ${i.hint && i.status !== "up" ? `<div class="hint">What to do: ${esc(i.hint)}</div>` : ""}
           ${i.link && !i.note ? `<div class="link">${linkText(i.link)}</div>` : ""}
           ${bars ? `<div class="bars">${bars}</div>` : ""}
         </div>
