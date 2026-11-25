@@ -124,7 +124,8 @@ def source_netcheck():
 # Configure with ROUTER_TYPE, ROUTER_URL (comma-separated for several units), ROUTER_USER,
 # ROUTER_PASS, ROUTER_SITE (UniFi), ROUTER_VERIFY_TLS=0 for self-signed certificates.
 
-import ssl, base64, http.cookiejar
+import ssl, base64
+from http.cookiejar import CookieJar
 
 
 def _opener():
@@ -132,7 +133,7 @@ def _opener():
     if os.environ.get("ROUTER_VERIFY_TLS", "0") in ("0", "false", "no"):
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-    jar = http.cookiejar.CookieJar()
+    jar = CookieJar()
     return urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx),
                                        urllib.request.HTTPCookieProcessor(jar)), jar
 
