@@ -59,6 +59,7 @@ services:
       - ./collector:/app:ro
       - ./data:/data
       - ./uptime-kuma:/kuma:ro      # read-only: maps monitors to IPs for router link info
+      - ./config:/config            # settings saved from the dashboard (router login); never served
     depends_on: [uptime-kuma]
 
   # lanpulse dashboard: the web app plus live data (http://<host>:8080)

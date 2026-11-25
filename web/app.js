@@ -268,3 +268,102 @@ refresh();
 setInterval(refresh, REFRESH_MS);
 setInterval(() => { const u = $("#updated"); if (u.dataset.t) u.textContent = `Updated ${ago(u.dataset.t)}`; }, 15_000);
 if ("serviceWorker" in navigator && !KIOSK) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+// ---------------------------------------------------------------- router setup (box only)
+// The box serves a small settings API at /api. On GitHub Pages or any other host there is none,
+// so this section simply stays hidden.
+let SETTINGS = null;
+
+async function loadSettings() {
+  if (KIOSK) return;
+  try {
+    const r = await fetch("api/settings", { cache: "no-store" });
+    if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) return;
+    SETTINGS = await r.json();
+    renderSetup();
+  } catch { /* no API here */ }
+}
+
+function renderSetup() {
+  const box = $("#setup");
+  const st = SETTINGS?.router;
+  if (!SETTINGS) { box.hidden = true; return; }
+  const label = (id) => (SETTINGS.router_types.find((t) => t.id === id) || {}).label || id;
+  let cls, html;
+  if (!st.type || st.type === "none") {
+    cls = "invite";
+    html = `<div><b>See how every device is connected</b><br><span class="help">Connect your router to show which devices use a cable, 2.4 GHz or 5 GHz, which access point they use and how strong their signal is.</span></div>
+            <button id="setup-open">Connect your router</button>`;
+  } else if (!st.has_password || st.error) {
+    cls = "problem";
+    html = `<div><b>Router connection needs attention</b><br><span class="help">${esc(label(st.type))}: ${esc(st.has_password ? st.error : "the password hasn't been entered yet")}</span></div>
+            <button id="setup-open">Fix the connection</button>`;
+  } else {
+    cls = "ok";
+    html = `<div><b>Router connected</b> <span class="help">${esc(label(st.type))} at ${esc(st.url)}</span></div>
+            <button id="setup-open" class="ghost">Change</button>`;
+  }
+  box.className = `setup ${cls}`;
+  box.innerHTML = html;
+  box.hidden = false;
+  $("#setup-open").onclick = openRouterDialog;
+}
+
+function openRouterDialog() {
+  const d = $("#router-dialog"), st = SETTINGS.router, types = SETTINGS.router_types;
+  const sel = $("#r-type");
+  sel.innerHTML = `<option value="">Choose…</option>` + types.map((t) => `<option value="${t.id}">${esc(t.label)}</option>`).join("");
+  const fill = (keepUser) => {
+    const t = types.find((x) => x.id === sel.value);
+    $("#r-help").textContent = t ? t.help : "Pick your router's brand or type. More can be added; see docs/network-checks.md.";
+    if (t && (!keepUser || !$("#r-url").value)) $("#r-url").value = t.url;
+    if (t && (!keepUser || !$("#r-user").value)) $("#r-user").value = t.user;
+  };
+  sel.value = st.type && st.type !== "none" ? st.type : "";
+  $("#r-url").value = st.url || "";
+  $("#r-user").value = st.user || "";
+  fill(true);
+  sel.onchange = () => fill(false);
+  $("#r-pass").value = "";
+  $("#r-pass").type = "password";
+  $("#r-pass").placeholder = st.has_password ? "Saved. Leave empty to keep it" : "";
+  $("#r-pin-wrap").hidden = !SETTINGS.pin_required;
+  $("#r-remove").hidden = !st.type || st.type === "none";
+  $("#r-result").hidden = true;
+  $("#r-show").onclick = () => { const p = $("#r-pass"); p.type = p.type === "password" ? "text" : "password"; $("#r-show").textContent = p.type === "password" ? "Show" : "Hide"; };
+  $("#r-test").onclick = () => routerAction("test");
+  $("#r-save").onclick = () => routerAction("save");
+  $("#r-remove").onclick = () => routerAction("remove");
+  d.showModal();
+}
+
+async function routerAction(action) {
+  const out = $("#r-result");
+  const body = { action, type: $("#r-type").value, url: $("#r-url").value.trim(), user: $("#r-user").value.trim(),
+                 password: $("#r-pass").value, pin: $("#r-pin").value };
+  if (action !== "remove" && (!body.type || !body.url)) { show("Choose the router type and enter its address.", false); return; }
+  for (const b of $("#router-form").querySelectorAll("button")) b.disabled = true;
+  show(action === "remove" ? "Disconnecting…" : "Connecting to the router…", null);
+  try {
+    const r = await fetch("api/router", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!r.ok || j.ok === false) { show(j.error || `Failed (HTTP ${r.status})`, false); return; }
+    if (action === "remove") { show("Disconnected. The saved login was removed.", true); }
+    else {
+      const bands = Object.entries(j.client_bands || {}).map(([k, v]) => `${v} ${k}`).join(", ");
+      show(`${action === "save" ? "Saved and connected" : "It works"}: ${j.clients} devices${bands ? ` (${bands})` : ""}` +
+           `${j.nodes > 1 ? `, ${j.nodes} access points` : ""}.${action === "test" ? " Press Save and connect to keep it." : " The dashboard updates in a few seconds."}`, true);
+      if (action === "save") $("#r-pass").value = "";
+    }
+    await loadSettings();
+    if (action !== "test") setTimeout(refresh, 3000);
+  } catch (e) {
+    show(`Couldn't reach the box: ${e.message}`, false);
+  } finally {
+    for (const b of $("#router-form").querySelectorAll("button")) b.disabled = false;
+  }
+  function show(msg, ok) { out.hidden = false; out.textContent = msg; out.className = `result ${ok === true ? "good" : ok === false ? "bad" : ""}`; }
+}
+
+loadSettings();
+setInterval(loadSettings, 60_000);

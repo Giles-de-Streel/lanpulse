@@ -340,23 +340,102 @@ def _num(v):
 
 
 ROUTERS = {"asus": router_asus, "openwrt": router_openwrt, "unifi": router_unifi, "tmobile": router_tmobile}
-_router_cache = {"t": 0, "data": None}
+
+# What the dashboard's "Router connection" form shows for each type: plain-language help on
+# where the login comes from, and sensible defaults.
+ROUTER_INFO = {
+    "tmobile": {"label": "T-Mobile Home Internet gateway", "user": "admin", "url": "http://{gw}",
+                "help": "The gateway's admin password: the one the T-Mobile Internet / T-Life app uses. "
+                        "Unless it was changed, it's on the sticker on the gateway (not the Wi-Fi password)."},
+    "asus": {"label": "ASUS router / AiMesh / ZenWiFi", "user": "admin", "url": "http://{gw}",
+             "help": "The router's web login (the one for router.asus.com or the ASUS Router app). "
+                     "Use the main router's address; mesh nodes are found automatically. Experimental."},
+    "openwrt": {"label": "OpenWrt", "user": "root", "url": "http://{gw}",
+                "help": "The LuCI login. For several access points, list each address separated by commas."},
+    "unifi": {"label": "UniFi (UDM, Cloud Gateway, Cloud Key or controller)", "user": "", "url": "https://{gw}",
+              "help": "A local admin account on the UniFi console (not a ui.com cloud account). "
+                      "A read-only 'View only' local user is enough."},
+}
+_router_cache = {"t": 0, "data": None, "error": None, "key": None}
+
+CONFIG_DIR = os.environ.get("LANPULSE_CONFIG_DIR", "/config")
+SETTINGS = os.path.join(CONFIG_DIR, "settings.json")
+
+
+def load_settings():
+    try:
+        return json.load(open(SETTINGS))
+    except (OSError, ValueError):
+        return {}
+
+
+def save_settings(s):
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    tmp = SETTINGS + ".tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(s, f, indent=1)
+    os.replace(tmp, SETTINGS)
+
+
+def router_config():
+    """Router settings: saved from the dashboard (config/settings.json) win over lanpulse.env."""
+    r = load_settings().get("router") or {}
+    cfg = {"type": os.environ.get("ROUTER_TYPE", ""), "url": os.environ.get("ROUTER_URL", ""),
+           "user": os.environ.get("ROUTER_USER", ""), "password": os.environ.get("ROUTER_PASS", ""),
+           "source": "lanpulse.env"}
+    if r:
+        cfg.update({k: r.get(k, "") for k in ("type", "url", "user", "password")}, source="dashboard")
+    cfg["type"] = (cfg["type"] or "").strip().lower()
+    return cfg
+
+
+def fetch_router(cfg):
+    kind = cfg["type"]
+    if kind not in ROUTERS:
+        raise RuntimeError(f"unknown router type '{kind}'")
+    urls = [u.strip().rstrip("/") for u in (cfg["url"] or "").split(",") if u.strip()]
+    if not urls:
+        raise RuntimeError("no router address set")
+    if not cfg["password"]:
+        raise RuntimeError("no password saved yet")
+    data = {"vendor": kind, "nodes": [], "clients": []}
+    for url in urls:
+        part = ROUTERS[kind](url, cfg["user"], cfg["password"])
+        data["nodes"] += part["nodes"]
+        data["clients"] += part["clients"]
+    return data
+
+
+def router_status():
+    cfg = router_config()
+    return {"type": cfg["type"] or None, "url": cfg["url"] or None, "user": cfg["user"] or None,
+            "has_password": bool(cfg["password"]), "source": cfg["source"],
+            "ok": _router_cache["data"] is not None and not _router_cache["error"],
+            "error": _router_cache["error"], "checked": _router_cache["t"] or None}
 
 
 def source_router():
     """Connection type / node / signal for every client, and mesh/AP topology with backhaul."""
-    kind = os.environ.get("ROUTER_TYPE", "").strip().lower()
+    cfg = router_config()
+    kind = cfg["type"]
     if not kind or kind == "none":
-        return {}
-    if time.time() - _router_cache["t"] < int(os.environ.get("ROUTER_INTERVAL", "300")) and _router_cache["data"]:
+        _router_cache.update(data=None, error=None)
+        return {"extras": {"router": router_status()}}
+    key = (kind, cfg["url"], cfg["user"], cfg["password"])
+    interval = int(os.environ.get("ROUTER_INTERVAL", "300"))
+    if key == _router_cache["key"] and time.time() - _router_cache["t"] < interval:
+        if _router_cache["error"]:                       # back off after a failed login, don't hammer
+            return {"extras": {"router": router_status()}}
         data = _router_cache["data"]
     else:
-        data = {"vendor": kind, "nodes": [], "clients": []}
-        for url in [u.strip().rstrip("/") for u in os.environ.get("ROUTER_URL", "").split(",") if u.strip()]:
-            part = ROUTERS[kind](url, os.environ.get("ROUTER_USER", ""), os.environ.get("ROUTER_PASS", ""))
-            data["nodes"] += part["nodes"]
-            data["clients"] += part["clients"]
-        _router_cache.update(t=time.time(), data=data)
+        try:
+            data = fetch_router(cfg)
+            _router_cache.update(t=time.time(), data=data, error=None, key=key)
+        except Exception as e:
+            _router_cache.update(t=time.time(), data=None, error=str(e)[:200], key=key)
+            log(f"router: {e}")
+            return {"extras": {"router": router_status()}}
     weak = int(os.environ.get("ROUTER_WEAK_RSSI", "-70"))
     items = []
     for n in data["nodes"]:
@@ -384,7 +463,7 @@ def source_router():
         bands[k] = bands.get(k, 0) + 1
     return {"groups": [{"name": "Network equipment", "items": items}] if items else [],
             "extras": {"topology": {"vendor": data["vendor"], "nodes": data["nodes"]},
-                       "clients": data["clients"], "client_bands": bands}}
+                       "clients": data["clients"], "client_bands": bands, "router": router_status()}}
 
 
 SOURCES = {"uptime-kuma": source_uptime_kuma, "netcheck": source_netcheck, "router": source_router}
@@ -478,6 +557,115 @@ def attach_links(snap):
                 i["link"] = c["link"]
 
 
+# ---------------------------------------------------------------------- settings API
+# A tiny local API the dashboard uses to set up things like the router login, so nobody needs a
+# console. Served only on the box (Caddy forwards /api/* to it, from private addresses only).
+# Rules: saved passwords are write-only (never sent back); changing the router type or address
+# clears the saved password unless a new one is given, so a stored login can't be redirected to
+# another device; LANPULSE_ADMIN_PIN, if set, is required for every change.
+
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+WAKE = threading.Event()
+_last_test = {"t": 0.0}
+
+
+def gateway_ip():
+    try:
+        return json.load(open(os.path.join(os.environ.get("PUBLISH_FILE_DIR", "/data"), "netcheck.json"))).get("gateway")
+    except (OSError, ValueError):
+        return None
+
+
+class SettingsAPI(BaseHTTPRequestHandler):
+    server_version = "lanpulse"
+
+    def log_message(self, fmt, *a):
+        pass
+
+    def _send(self, code, obj):
+        body = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _info(self):
+        gw = gateway_ip() or "192.168.1.1"
+        types = [{"id": k, **{**v, "url": v["url"].format(gw=gw)}} for k, v in ROUTER_INFO.items()]
+        return {"router": router_status(), "router_types": types, "gateway": gw,
+                "pin_required": bool(os.environ.get("LANPULSE_ADMIN_PIN"))}
+
+    def do_GET(self):
+        if self.path.split("?")[0] == "/api/settings":
+            return self._send(200, self._info())
+        self._send(404, {"error": "not found"})
+
+    def do_POST(self):
+        if self.path.split("?")[0] != "/api/router":
+            return self._send(404, {"error": "not found"})
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            req = json.loads(self.rfile.read(min(n, 65536)) or b"{}")
+        except ValueError:
+            return self._send(400, {"error": "bad request"})
+        pin = os.environ.get("LANPULSE_ADMIN_PIN")
+        if pin and str(req.get("pin", "")) != pin:
+            time.sleep(1)
+            return self._send(403, {"error": "Wrong PIN"})
+        action = req.get("action", "save")
+        if action == "remove":
+            s = load_settings()
+            s["router"] = {"type": "none"}
+            save_settings(s)
+            _router_cache.update(t=0, data=None, error=None, key=None)
+            WAKE.set()
+            return self._send(200, {"ok": True, **self._info()})
+        kind = str(req.get("type", "")).strip().lower()
+        if kind not in ROUTERS:
+            return self._send(400, {"error": "Choose a router type"})
+        cur = router_config()
+        url = str(req.get("url", "")).strip()
+        user = str(req.get("user", "")).strip()
+        password = req.get("password") or ""
+        if not password and kind == cur["type"] and url == cur["url"]:
+            password = cur["password"]           # keep the saved one when only re-testing / renaming
+        cfg = {"type": kind, "url": url, "user": user, "password": password}
+        if time.time() - _last_test["t"] < 3:
+            return self._send(429, {"error": "One moment, still busy with the last try"})
+        _last_test["t"] = time.time()
+        try:
+            data = fetch_router(cfg)
+        except urllib.error.HTTPError as e:
+            msg = "the router refused the login (check the password)" if e.code in (401, 403) else f"router answered HTTP {e.code}"
+            return self._send(200, {"ok": False, "error": f"Couldn't connect: {msg}"})
+        except Exception as e:
+            return self._send(200, {"ok": False, "error": f"Couldn't connect: {str(e)[:200]}"})
+        bands = {}
+        for c in data["clients"]:
+            k = "wired" if c["link"]["type"] == "wired" else f"{c['link'].get('band') or '?'} GHz"
+            bands[k] = bands.get(k, 0) + 1
+        out = {"ok": True, "nodes": len(data["nodes"]), "clients": len(data["clients"]), "client_bands": bands}
+        if action == "save":
+            s = load_settings()
+            s["router"] = cfg
+            save_settings(s)
+            _router_cache.update(t=time.time(), data=data, error=None, key=(kind, url, user, password))
+            WAKE.set()
+            out["saved"] = True
+        self._send(200, out)
+
+
+def start_api():
+    port = int(os.environ.get("LANPULSE_API_PORT", "8081"))
+    srv = ThreadingHTTPServer(("0.0.0.0", port), SettingsAPI)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    log(f"settings API on :{port}")
+
+
 def run_once():
     snap = build_snapshot()
     body = json.dumps(snap, separators=(",", ":")).encode()
@@ -496,6 +684,8 @@ if __name__ == "__main__":
     log(f"lanpulse collector: sources={os.environ.get('LANPULSE_SOURCES', 'uptime-kuma')} "
         f"publishers=file{','+os.environ['LANPULSE_PUBLISHERS'] if os.environ.get('LANPULSE_PUBLISHERS') else ''} "
         f"every {INTERVAL}s")
+    if not once and os.environ.get("LANPULSE_API", "1") != "0":
+        start_api()
     while True:
         try:
             s = run_once()
@@ -506,4 +696,5 @@ if __name__ == "__main__":
             traceback.print_exc()
             if once:
                 sys.exit(1)
-        time.sleep(INTERVAL)
+        WAKE.wait(INTERVAL)
+        WAKE.clear()

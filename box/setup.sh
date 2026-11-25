@@ -21,7 +21,8 @@ apt-get install -y -q docker.io docker-compose-v2 sqlite3 \
 systemctl enable --now docker >/dev/null
 
 echo "== stack -> $APP"
-mkdir -p "$APP"/scripts "$APP"/data "$APP"/web "$APP"/collector
+mkdir -p "$APP"/scripts "$APP"/data "$APP"/web "$APP"/collector "$APP"/config
+chmod 700 "$APP"/config
 install -m 644 "$BOX/docker-compose.yml" "$BOX/Caddyfile" "$APP/"
 install -m 755 "$BOX"/scripts/*.sh "$APP/scripts/"
 rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/"
