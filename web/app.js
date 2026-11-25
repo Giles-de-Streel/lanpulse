@@ -156,41 +156,56 @@ function fitsScreen() {
 }
 
 function fitKiosk() {
-  const body = document.body, secs = [...document.querySelectorAll("#groups > section.group")];
+  const body = document.body, groupsEl = $("#groups");
+  const secs = [...document.querySelectorAll("#groups > section.group:not(#k-merged)")];
   const levels = [
     { density: "", collapse: false },
     { density: "compact", collapse: false },
     { density: "compact", collapse: true },
     { density: "mini", collapse: true },
+    { density: "mini", collapse: true, merge: true },   // all healthy groups become one chip
   ];
+  $("#k-merged")?.remove();
   const apply = (lv) => {
     body.classList.toggle("k-compact", lv.density === "compact");
     body.classList.toggle("k-mini", lv.density === "mini");
+    $("#k-merged")?.remove();
     for (const s of secs) {
       const c = lv.collapse && s.dataset.healthy === "1";
       s.classList.toggle("collapsed", c);
+      s.hidden = !!(lv.merge && c);
       const h = $("h2", s);
       if (c && !h.dataset.full) { h.dataset.full = h.innerHTML; h.textContent = s.dataset.summary; }
       if (!c && h.dataset.full) { h.innerHTML = h.dataset.full; delete h.dataset.full; }
     }
+    if (lv.merge) {
+      const healthy = secs.filter((s) => s.dataset.healthy === "1");
+      if (healthy.length) {
+        const total = healthy.reduce((a, s) => a + s.querySelectorAll(".tile").length, 0);
+        const notes = healthy.reduce((a, s) => a + s.querySelectorAll(".tile.low").length, 0);
+        const m = document.createElement("section");
+        m.id = "k-merged";
+        m.className = "group collapsed";
+        m.innerHTML = `<h2>${secs.length > healthy.length ? "Everything else" : "Everything"}: all ${total} working in ${healthy.length} groups${notes ? ` · ${notes} ${notes === 1 ? "note" : "notes"}` : ""}</h2>`;
+        groupsEl.append(m);
+      }
+    }
   };
-  for (const s of secs) s.hidden = false;
   $("#k-pager")?.remove();
-  let fitted = false;
+  clearInterval(kioskState.timer);
   for (const lv of levels) {
     apply(lv);
-    if (fitsScreen()) { fitted = true; break; }
+    if (fitsScreen()) return;
   }
-  clearInterval(kioskState.timer);
-  if (fitted) { kioskState.pages = []; return; }
-  // Paging: collapsed (all-good) groups stay on every page; the rest are dealt into pages in order.
-  const rest = secs.filter((s) => !s.classList.contains("collapsed"));
+  // Still too much: only groups with problems are left as full sections. Keep as many as fit,
+  // most serious first (they are already ordered that way), and rotate the rest in pages.
+  const rest = secs.filter((s) => !s.hidden);
   const pages = [];
   let cur = [];
   for (const s of rest) s.hidden = true;
   for (const s of rest) {
     s.hidden = false;
-    if (!fitsScreen() && cur.length) {           // this group doesn't fit: start a new page with it
+    if (!fitsScreen() && cur.length) {
       for (const x of cur) x.hidden = true;
       pages.push(cur);
       cur = [];
@@ -198,18 +213,18 @@ function fitKiosk() {
     cur.push(s);
   }
   if (cur.length) pages.push(cur);
-  kioskState.pages = pages;
   if (kioskState.page >= pages.length) kioskState.page = 0;
   const show = () => {
     for (const s of rest) s.hidden = true;
     for (const s of pages[kioskState.page]) s.hidden = false;
     let p = $("#k-pager");
     if (!p) { p = document.createElement("div"); p.id = "k-pager"; document.body.append(p); }
-    p.textContent = `Page ${kioskState.page + 1} of ${pages.length}`;
+    p.textContent = `Problems page ${kioskState.page + 1} of ${pages.length}`;
   };
   show();
-  kioskState.timer = setInterval(() => { kioskState.page = (kioskState.page + 1) % pages.length; show(); }, KIOSK_PAGE_MS);
+  if (pages.length > 1) kioskState.timer = setInterval(() => { kioskState.page = (kioskState.page + 1) % pages.length; show(); }, KIOSK_PAGE_MS);
 }
+
 if (KIOSK) addEventListener("resize", () => requestAnimationFrame(fitKiosk));
 
 function renderDetails(x) {
