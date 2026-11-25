@@ -57,9 +57,51 @@ function ago(iso) {
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pct = (u) => (u == null ? "" : `${(u * 100).toFixed(u >= 0.9995 ? 0 : 1)}%`);
 
+function recount(groups) {
+  const s = { total: 0, up: 0, down: 0, warn: 0, note: 0, pending: 0, maintenance: 0, unknown: 0 };
+  for (const g of groups) for (const i of g.items) {
+    s.total++;
+    const k = i.status === "warn" && i.priority === "low" ? "note" : i.status;
+    s[k] = (s[k] || 0) + 1;
+  }
+  return s;
+}
+
+function renderQuick(items, x) {
+  const el = $("#quick");
+  const label = (i) => {
+    if (i.id === "net-devices" && x.devices) {
+      const on = x.devices.filter((d) => d.online).length, nw = x.devices.filter((d) => d.new).length;
+      return `${on} online${nw ? ` · ${nw} new` : ""}`;
+    }
+    if (i.id === "net-weak-wifi" && x.clients) {
+      const s = x.clients.filter((c) => c.link?.type === "wifi" && c.link.rssi != null).map((c) => c.link.rssi);
+      const poor = s.filter((r) => r < -80).length, weak = s.filter((r) => r >= -80 && r < -70).length;
+      return poor || weak ? [poor && `${poor} poor`, weak && `${weak} weak`].filter(Boolean).join(" · ") : `${s.length} devices, all fine`;
+    }
+    return "";
+  };
+  const names = { "net-devices": "Devices", "net-weak-wifi": "Wi-Fi signal" };
+  el.innerHTML = items.map((i) => {
+    const sub = label(i);
+    return `<a class="qbtn" href="${viewHref(TILE_VIEWS[i.id][0])}"${KIOSK ? "" : ` target="_blank" rel="noopener"`} title="${esc(i.note || i.message || "")}">
+      <b>${esc(names[i.id] || i.name)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}<i aria-hidden="true">↗</i></a>`;
+  }).join("");
+  el.hidden = !items.length;
+}
+
 function render(snap) {
   if (VIEW) { LAST_SNAP = snap; return renderView(snap); }
   LAST_SNAP = snap;
+  // Devices and Wi-Fi signal change constantly, so they aren't shown as issues: they become quick-link
+  // buttons under the banner and are left out of the tiles and the counts.
+  const quick = [];
+  snap = { ...snap, groups: (snap.groups || []).map((g) => ({ ...g, items: g.items.filter((i) => {
+    if (TILE_VIEWS[i.id]) { quick.push(i); return false; }
+    return true;
+  }) })).filter((g) => g.items.length) };
+  snap.summary = recount(snap.groups);
+  renderQuick(quick, snap.extras || {});
   const site = snap.site || {};
   document.title = site.name || "lanpulse";
   $("#site-name").textContent = site.name || "Network status";
