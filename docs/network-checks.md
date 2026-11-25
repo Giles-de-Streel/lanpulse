@@ -49,3 +49,16 @@ Adding another: write `router_<name>(url, user, pw)` in `collector.py` that retu
 Settings changes (such as the router connection) need an administrator sign-in. The first time anyone signs in on a box, the dashboard asks them to create the administrator password (at least 8 characters). Only a salted PBKDF2 hash is stored, in `/opt/monitor/config/settings.json`. Sessions last 12 hours; sign-ins started from the wall screen return to it after 10 minutes without use. After 5 wrong passwords, sign-in pauses for a minute.
 
 Forgot the password? On the box: `sudo rm /opt/monitor/config/settings.json && cd /opt/monitor && sudo docker compose restart lanpulse-collector`. This also removes the saved router login, so you'd reconnect the router afterwards.
+
+## Detail pages
+
+The **Devices on the network** and **Wi-Fi signal of devices** tiles link to full-page lists
+(`?view=devices`, `?view=wifi`). In a normal browser they open in a new tab; on the wall screen
+they open in place with a Back button and return by themselves after 5 minutes.
+
+- **Devices**: every device the device finder has seen, joined (by MAC, else IP) with the router's
+  client list for connection type, access point and signal. Search, filters (online, new, offline,
+  wired, Wi-Fi, weak signal, unnamed) and sortable columns.
+- **Wi-Fi signal**: every Wi-Fi client ranked weakest first, rated Excellent (≥ −50 dBm), Good (to −67),
+  Fair (to −70), Weak (to −80) or Poor, with a per-access-point summary when there is more than one.
+  Band and link-speed columns appear only when the router reports them.
