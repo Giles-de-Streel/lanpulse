@@ -16,6 +16,7 @@ lanpulse looks at the network itself as well as individual devices. Nothing here
 | Public IP | the current address and when it changes | api.ipify.org (the only outside call) |
 | Wi-Fi airspace | your access points, bands, channels, congestion, open or impostor networks using your name, new APs | `iw scan` with the box's Wi-Fi adapter |
 | Devices | online, new (last 24 h) and unidentified devices | NetAlertX database (read-only) |
+| Internet uplink | cellular signal (band, bars, RSRP, SINR) and gateway restarts, for 5G/LTE home internet gateways that publish it without a login (T-Mobile so far; add probes to `UPLINKS`) | gateway local API |
 
 Statuses: `up`, `warn` (needs a look: the dashboard stays usable, amber), `down`, `unknown`.
 Each check can be turned off with `NETCHECK_<NAME>=0` in `lanpulse.env`, where the tuning settings also live.

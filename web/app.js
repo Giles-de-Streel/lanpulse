@@ -123,6 +123,18 @@ function renderDetails(x) {
   if (KIOSK) { box.hidden = true; return; }
   const panels = [];
 
+  // Internet uplink (cellular / fixed-wireless gateways that publish link quality)
+  if (x.uplink) {
+    const u = x.uplink;
+    const rows = (u.cells || []).map((c) => [c.tech, esc((c.bands || []).join(", ")), c.bars ?? "",
+      c.rsrp ?? "", c.rsrq ?? "", c.sinr ?? "", c.quality === "weak" ? `<span class="weak">weak</span>` : esc(c.quality || "")]);
+    const days = u.uptime_s != null ? `${(u.uptime_s / 86400).toFixed(1)} days` : "?";
+    panels.push(["uplink", `Internet uplink (${esc(u.provider || u.kind)})`,
+      `<ul class="facts"><li><b>Gateway:</b> ${esc(u.model || "?")}, firmware ${esc(u.firmware || "?")}, up ${days}</li></ul>
+       ${table(["Tech", "Band", "Bars", "RSRP (dBm)", "RSRQ (dB)", "SINR (dB)", "Quality"], rows)}
+       <p class="help">RSRP is signal strength (above −100 good, below −115 weak). SINR is signal over noise (above 10 good, below 0 weak).</p>`]);
+  }
+
   // Exposure: what the internet can see
   if (x.exposure) {
     const e = x.exposure, u = e.upnp || {};

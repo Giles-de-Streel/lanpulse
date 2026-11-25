@@ -229,6 +229,90 @@ def check_dns(gw):
                   f"{'Slow' if st == 'warn' else 'Answering'}: {ms} ms via {server}", server=server, ms=ms)
 
 
+# Internet uplink probes: modems/gateways that publish link quality on the LAN without a login.
+# Each returns a dict (see check_uplink) or None when the device isn't that kind.
+
+def _get_json(url, timeout=5):
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as r:
+            return json.loads(r.read().decode())
+    except Exception:
+        return None
+
+
+def uplink_tmobile(gw):
+    """T-Mobile Home Internet gateways (Arcadyan, Sagemcom, Nokia): /TMI/v1/gateway."""
+    d = _get_json(f"http://{gw}/TMI/v1/gateway?get=all")
+    if not d or "signal" not in d:
+        return None
+    sig = d["signal"]
+    cells = []
+    for tech in ("5g", "4g"):
+        s = sig.get(tech)
+        if s:
+            cells.append({"tech": tech.upper(), "bands": s.get("bands", []), "bars": s.get("bars"),
+                          "rsrp": s.get("rsrp"), "rsrq": s.get("rsrq"), "sinr": s.get("sinr"), "rssi": s.get("rssi")})
+    dev = d.get("device", {})
+    return {"kind": "cellular", "provider": "T-Mobile Home Internet",
+            "model": f"{dev.get('manufacturer', '')} {dev.get('model', '')}".strip(),
+            "firmware": dev.get("softwareVersion"), "uptime_s": (d.get("time") or {}).get("upTime"),
+            "registered": (sig.get("generic") or {}).get("registration") == "registered", "cells": cells}
+
+
+UPLINKS = {"tmobile": uplink_tmobile}
+
+
+def cell_quality(c):
+    """Rate a cellular link from RSRP (signal strength) and SINR (signal vs noise)."""
+    rsrp, sinr = c.get("rsrp"), c.get("sinr")
+    if rsrp is None and sinr is None:
+        return "unknown", "no signal figures"
+    bad = (rsrp is not None and rsrp < -115) or (sinr is not None and sinr < 0)
+    fair = (rsrp is not None and rsrp < -100) or (sinr is not None and sinr < 10)
+    return ("weak" if bad else "fair" if fair else "good"), None
+
+
+def check_uplink(gw, state):
+    probes = [p.strip() for p in env("NETCHECK_UPLINK_TYPES", ",".join(UPLINKS)).split(",") if p.strip() in UPLINKS]
+    host = env("NETCHECK_UPLINK_HOST", gw or "")
+    info = None
+    for p in probes:
+        info = UPLINKS[p](host)
+        if info:
+            break
+    if not info:
+        return None, None                      # nothing recognised: the check simply doesn't appear
+    if info["kind"] == "cellular":
+        if not info["registered"] or not info["cells"]:
+            return result("uplink", "Internet uplink", "down",
+                          f"{info['provider']} gateway is not connected to the cell network"), info
+        parts, worst = [], "good"
+        for c in info["cells"]:
+            q, _ = cell_quality(c)
+            c["quality"] = q
+            if q == "weak" or (q == "fair" and worst == "good"):
+                worst = q
+            parts.append(f"{c['tech']} {'/'.join(c['bands'])}: {q}"
+                         + (f", {c['bars']:.0f} bars" if c.get("bars") is not None else "")
+                         + (f", RSRP {c['rsrp']}" if c.get("rsrp") is not None else "")
+                         + (f", SINR {c['sinr']}" if c.get("sinr") is not None else ""))
+        # remember gateway reboots (uptime going backwards)
+        up = info.get("uptime_s")
+        if up is not None:
+            last = state.get("uplink_uptime")
+            if last is not None and up < last:
+                state["uplink_last_reboot"] = int(time.time() - up)
+            state["uplink_uptime"] = up
+        reb = state.get("uplink_last_reboot")
+        recent = reb and time.time() - reb < 86400
+        st = "warn" if worst == "weak" or recent else "up"
+        summ = f"{info['provider']}, " + "; ".join(parts) + \
+               (". The gateway restarted in the last 24 h" if recent else "") + \
+               (". Weak signal: moving the gateway near a window or higher up often helps" if worst == "weak" else "")
+        return result("uplink", "Internet uplink", st, summ), info
+    return None, None
+
+
 def check_publicip(state):
     try:
         with urllib.request.urlopen("https://api.ipify.org", timeout=10) as r:
@@ -412,6 +496,11 @@ def main():
     if enabled("publicip"):
         checks.append(check_publicip(state))
     extras = {}
+    if enabled("uplink"):
+        c, x = check_uplink(gw, state)
+        if c:
+            checks.insert(0, c)
+            extras["uplink"] = x
     if enabled("airspace"):
         c, x = check_airspace(state)
         checks.append(c)
