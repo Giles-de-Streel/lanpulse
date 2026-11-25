@@ -496,10 +496,16 @@ def check_airspace(state):
         problems.append("open (no password) network using your name: " + ", ".join(n["bssid"] for n in open_own))
     # Hidden networks broadcast by your own units (guest, mesh backhaul, setup) share the tail
     # of their radio address with one of your access points: treat them as yours, not neighbours.
+    # Guest and extra networks (and mesh backhaul) from your own units are recognised the same way,
+    # or by a radio address that differs from one of yours only in its last byte, so a guest Wi-Fi
+    # isn't counted as a neighbour. They don't need adding to NETCHECK_OWN_SSIDS.
     tails = {n["bssid"][-5:] for n in mine}
+    heads = {n["bssid"][:14] for n in mine}
     for n in nets:
-        if not n["own"] and not n["ssid"] and n["bssid"][-5:] in tails:
-            n["own"], n["own_hidden"] = True, True
+        if n["own"]:
+            continue
+        if n["bssid"][-5:] in tails or n["bssid"][:14] in heads:
+            n["own"], n["own_hidden"], n["own_extra"] = True, True, True
     neighbours = [n for n in nets if not n["own"]]
     audible = [n for n in neighbours if (n["signal_dbm"] or -100) >= int(env("NETCHECK_NEIGHBOUR_DBM", "-80"))]
     notes = []
@@ -683,8 +689,8 @@ def check_devices(state):
         parts.append(f"{len(unknown)} unidentified")
     st = "warn" if new else "up"
     devs.sort(key=lambda d: [int(x) if x.isdigit() else 0 for x in (d["ip"] or "0.0.0.0").split(".")])
-    return result("devices", "Devices on the network", st, "; ".join(parts),
-                  online=len(online), total=len(devs), new=len(new)), {"devices": devs}
+    return {**result("devices", "Devices on the network", st, "; ".join(parts),
+                     online=len(online), total=len(devs), new=len(new)), "priority": "low"}, {"devices": devs}
 
 
 # What to do, in plain words, when a check isn't green. Shown on the tile and in the banner.

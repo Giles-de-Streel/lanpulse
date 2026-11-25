@@ -108,7 +108,7 @@ def source_netcheck():
     items = [{"id": f"net-{c['id']}", "name": c["name"], "kind": "netcheck",
               "status": "unknown" if stale else c["status"],
               "note": ("(out of date) " if stale else "") + c["summary"], "message": c["summary"],
-              "hint": c.get("hint")}
+              "hint": c.get("hint"), "priority": c.get("priority")}
              for c in rep.get("checks", [])]
     extras = dict(rep.get("extras", {}))
     extras["netcheck"] = {"generated": rep["generated"], "interface": rep.get("interface"),
@@ -511,7 +511,7 @@ def weak_wifi(clients):
             "centrally and up high, away from metal and thick walls; add a mesh point or access point near "
             "the weak devices; and use a cable for things that never move (TVs, PCs, game consoles). "
             "Phones and cars that are leaving or just outside can show up here briefly.")
-    item = {"id": "net-weak-wifi", "name": "Wi-Fi signal of devices", "kind": "netcheck", "status": status,
+    item = {"id": "net-weak-wifi", "name": "Wi-Fi signal of devices", "kind": "netcheck", "status": status, "priority": "low",
             "note": summary, "message": summary, "hint": hint if status != "up" else None}
     return item, listed
 
@@ -587,10 +587,17 @@ def build_snapshot():
     attach_links(snap)
     counts = {}
     for g in snap["groups"]:
+        # lower-priority findings (new devices, weak Wi-Fi) go to the end of their group
+        g["items"].sort(key=lambda i: i.get("priority") == "low")
         for i in g["items"]:
-            counts[i["status"]] = counts.get(i["status"], 0) + 1
+            # a "warn" marked low priority is a note: shown amber, but not headline news
+            s = "note" if i["status"] == "warn" and i.get("priority") == "low" else i["status"]
+            counts[s] = counts.get(s, 0) + 1
     snap["summary"] = {"total": sum(counts.values()), **{s: counts.get(s, 0) for s in
-                       ("up", "down", "warn", "pending", "maintenance", "unknown")}}
+                       ("up", "down", "warn", "note", "pending", "maintenance", "unknown")}}
+    # keep Network health above the router's equipment list, and lower-priority groups last
+    order = {"Network health": 1, "Network equipment": 2}
+    snap["groups"].sort(key=lambda g: order.get(g["name"], 0))
     return snap
 
 

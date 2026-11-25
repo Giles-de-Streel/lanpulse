@@ -160,3 +160,5 @@ a.button:not(.ghost) { background: #0f766e; color: #fff; }
 .toolcard:hover { border-color: #0f766e; }
 .toolcard span { display: block; color: var(--muted); font-size: .85rem; }
 .live-head { font-size: 1.15rem; margin: 1.6rem 0 .6rem; }
+.pill.note { background: var(--muted); margin-left: .3rem; }
+.tile.warn.low { border-style: dashed; }
