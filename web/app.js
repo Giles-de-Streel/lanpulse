@@ -971,7 +971,8 @@ function viewHistory(x) {
       const t = end - k * step, r = by.get(t);
       const pct = r && r[1] + r[2] ? r[1] / (r[1] + r[2]) : null;
       const cls = pct == null ? "none" : pct >= 0.9999 ? "up" : pct >= 0.98 ? "dip" : "down";
-      const label = new Date(t * 1000).toLocaleString(undefined, days === 1 ? { hour: "numeric" } : { month: "short", day: "numeric" });
+      // daily buckets start at UTC midnight, so name the day in UTC (local time would show the day before in the Americas)
+      const label = new Date(t * 1000).toLocaleString(undefined, days === 1 ? { hour: "numeric" } : { month: "short", day: "numeric", timeZone: "UTC" });
       cells.push(`<i class="${cls}" title="${esc(label)}: ${pct == null ? "no data" : `${(pct * 100).toFixed(pct >= 0.9995 ? 0 : 1)}% up`}"></i>`);
     }
     return { m, pct: up + down ? up / (up + down) : null, up, down, outs,
