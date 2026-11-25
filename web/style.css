@@ -119,3 +119,4 @@ th { color: var(--muted); font-weight: 600; }
 menu .spacer { flex: 1; }
 button.danger { color: var(--down); border-color: var(--down); }
 button:disabled { opacity: .6; cursor: wait; }
+[hidden] { display: none !important; }
