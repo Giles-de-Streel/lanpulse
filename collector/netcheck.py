@@ -459,6 +459,16 @@ def check_devices(state):
                      "first_seen": first, "last_seen": last, "online": bool(present),
                      "new": bool(t and t > sweep_end and now - t < 86400),
                      "random_mac": rnd, "ssid": ssid or None})
+    # the box's own adapters are never "new" or "unidentified"
+    own = set()
+    for dev in os.listdir("/sys/class/net"):
+        try:
+            own.add(open(f"/sys/class/net/{dev}/address").read().strip().lower())
+        except OSError:
+            pass
+    for d in devs:
+        if d["mac"].lower() in own:
+            d["new"], d["this_box"] = False, True
     online = [d for d in devs if d["online"]]
     new = [d for d in devs if d["new"]]
     unknown = [d for d in online if not d["name"] and not d["vendor"] and not d["random_mac"]]
