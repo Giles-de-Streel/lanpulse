@@ -1,0 +1,15 @@
+group,name,type,target,description
+# Example site. Copy, rename and edit. Keep your real site files private.
+# type: ping (IP/host) | http (URL) | port (host:port) | dns (name@server)
+# Groups appear as sections on the dashboard, in file order.
+Internet,Internet (Cloudflare 1.1.1.1),ping,1.1.1.1,Can we reach the internet at all?
+Internet,Internet (website loads),http,https://www.google.com,Can we load a website?
+Internet,DNS (name lookups via router),dns,google.com@192.168.1.1,Is the router answering name lookups?
+Wi-Fi,Main router,ping,192.168.1.1,
+Wi-Fi,Hall access point,ping,192.168.1.2,
+Office,Printer,port,192.168.1.50:9100,Raw print port
+Office,File server,port,192.168.1.10:445,Windows file sharing
+Building,Thermostat,ping,192.168.1.70,
+Monitoring box,lanpulse dashboard,http,http://host.docker.internal:8080,
+Monitoring box,NetAlertX (device finder),http,http://host.docker.internal:20211,
+Monitoring box,Speedtest Tracker,http,http://host.docker.internal:8765,

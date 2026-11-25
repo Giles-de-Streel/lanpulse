@@ -1,0 +1,7 @@
+# site data and secrets never belong here
+*.env
+!box/lanpulse.env.example
+/sites/
+/monitors/
+/data/
+/backups/

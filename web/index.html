@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lanpulse</title>
+  <meta name="description" content="At-a-glance network status: green means working, red means not responding.">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="icon.svg" alt="" width="36" height="36">
+      <div>
+        <h1 id="site-name">Network status</h1>
+        <p id="site-desc"></p>
+      </div>
+    </div>
+    <div class="right">
+      <span id="updated"></span>
+      <button id="open-settings" class="ghost" aria-label="Settings" title="Data source settings">⚙</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="banner" class="banner pending" role="status" aria-live="polite">
+      <div class="big-dot"></div>
+      <div>
+        <div id="banner-title">Loading…</div>
+        <div id="banner-sub"></div>
+      </div>
+    </div>
+    <p id="warning" class="warning" hidden></p>
+    <div id="groups"></div>
+  </main>
+
+  <footer>
+    <span class="legend"><i class="up"></i>Working <i class="pending"></i>Checking <i class="down"></i>Not responding</span>
+    <a href="https://github.com/Giles-de-Streel/lanpulse" target="_blank" rel="noopener">lanpulse</a>
+  </footer>
+
+  <dialog id="settings">
+    <form method="dialog">
+      <h2>Data source</h2>
+      <label>Read status from
+        <select id="source" name="source"></select>
+      </label>
+      <p id="source-help" class="help"></p>
+      <div id="fields"></div>
+      <p class="help">Settings are saved in this browser only. You can also use URL parameters: <code>?source=url&amp;url=…</code>, and <code>&amp;kiosk</code> for a wall screen.</p>
+      <menu>
+        <button value="cancel" class="ghost">Cancel</button>
+        <button value="save">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

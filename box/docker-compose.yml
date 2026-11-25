@@ -1,0 +1,73 @@
+services:
+  # Up/down + latency dashboard with alerts (http://<host>:3001)
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # lets monitors check the other tools on this box
+    volumes:
+      - ./uptime-kuma:/app/data
+
+  # Finds every device on the LAN, flags new/unknown ones (http://<host>:20211)
+  netalertx:
+    image: ghcr.io/jokob-sk/netalertx:latest
+    container_name: netalertx
+    restart: unless-stopped
+    network_mode: host
+    cap_add: [NET_ADMIN, NET_RAW, NET_BIND_SERVICE]
+    environment:
+      - TZ=${TZ:-UTC}
+      - PORT=20211
+    volumes:
+      - ./netalertx:/data
+
+  # Scheduled internet speed tests with history graphs (http://<host>:8765)
+  speedtest-tracker:
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest-tracker
+    restart: unless-stopped
+    ports:
+      - "8765:80"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-UTC}
+      - APP_KEY=${SPEEDTEST_APP_KEY}
+      - APP_URL=http://localhost:8765
+      - DB_CONNECTION=sqlite
+      - SPEEDTEST_SCHEDULE=0 */4 * * *
+      - DISPLAY_TIMEZONE=${TZ:-UTC}
+    volumes:
+      - ./speedtest-tracker:/config
+
+  # lanpulse collector: reads the Uptime Kuma status page, writes data/snapshot.json,
+  # and optionally pushes it to cloud publishers (see lanpulse.env.example)
+  lanpulse-collector:
+    image: python:3.12-alpine
+    container_name: lanpulse-collector
+    restart: unless-stopped
+    command: ["python", "-u", "/app/collector.py"]
+    env_file: [lanpulse.env]
+    environment:
+      - KUMA_URL=http://uptime-kuma:3001
+      - PUBLISH_FILE_DIR=/data
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./collector:/app:ro
+      - ./data:/data
+    depends_on: [uptime-kuma]
+
+  # lanpulse dashboard: the web app plus live data (http://<host>:8080)
+  lanpulse-web:
+    image: caddy:2-alpine
+    container_name: lanpulse-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv:ro
+      - ./data:/srv/data:ro

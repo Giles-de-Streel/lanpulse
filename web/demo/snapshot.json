@@ -1,0 +1,34 @@
+{
+  "schema": "lanpulse.snapshot/1",
+  "generated": "2026-01-01T12:00:00+00:00",
+  "sources": [{ "name": "demo", "ok": true }],
+  "site": {
+    "name": "Example Community Center",
+    "description": "Green means working. Red means not responding. If something stays red for more than 10 minutes, let the network volunteer know."
+  },
+  "summary": { "total": 11, "up": 9, "down": 1, "pending": 1, "maintenance": 0, "unknown": 0 },
+  "groups": [
+    { "name": "Internet", "items": [
+      { "id": "d1", "name": "Internet connection", "kind": "ping", "status": "up", "latency_ms": 24, "uptime_24h": 1,
+        "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
+      { "id": "d2", "name": "Websites load", "kind": "http", "status": "up", "latency_ms": 180, "uptime_24h": 0.998,
+        "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"down"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] }
+    ]},
+    { "name": "Wi-Fi", "items": [
+      { "id": "d3", "name": "Main router", "kind": "ping", "status": "up", "latency_ms": 2, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
+      { "id": "d4", "name": "Hall access point", "kind": "ping", "status": "up", "latency_ms": 6, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
+      { "id": "d5", "name": "Office access point", "kind": "ping", "status": "pending", "latency_ms": null, "uptime_24h": 0.97, "message": "1 missed check", "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"pending"}] }
+    ]},
+    { "name": "Security", "items": [
+      { "id": "d6", "name": "Front door camera", "kind": "ping", "status": "down", "latency_ms": null, "uptime_24h": 0.86, "since": "2026-01-01T11:48:00+00:00", "message": "No reply to ping", "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"down"},{"s":"down"},{"s":"down"},{"s":"down"}] },
+      { "id": "d7", "name": "Parking lot camera", "kind": "ping", "status": "up", "latency_ms": 41, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] }
+    ]},
+    { "name": "Office & building", "items": [
+      { "id": "d8", "name": "Printer", "kind": "port", "status": "up", "latency_ms": 5, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
+      { "id": "d9", "name": "Thermostat (sanctuary)", "kind": "ping", "status": "up", "latency_ms": 60, "uptime_24h": 0.99, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
+      { "id": "d10", "name": "Thermostat (hall)", "kind": "ping", "status": "up", "latency_ms": 72, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] },
+      { "id": "d11", "name": "Livestream PC", "kind": "ping", "status": "up", "latency_ms": 3, "uptime_24h": 1, "history": [{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"},{"s":"up"}] }
+    ]}
+  ],
+  "extras": {}
+}

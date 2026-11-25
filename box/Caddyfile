@@ -1,0 +1,12 @@
+# Serves the lanpulse dashboard and its live snapshot on port 80 (published as 8080).
+:80 {
+	root * /srv
+	encode gzip
+	file_server
+	@data path /data/*
+	header @data {
+		Cache-Control "no-store"
+		# lets a dashboard on another origin (e.g. GitHub Pages via an HTTPS tunnel) read it
+		Access-Control-Allow-Origin "*"
+	}
+}
