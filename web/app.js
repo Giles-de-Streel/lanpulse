@@ -272,23 +272,23 @@ if ("serviceWorker" in navigator && !KIOSK) navigator.serviceWorker.register("sw
 // ---------------------------------------------------------------- router setup (box only)
 // The box serves a small settings API at /api. On GitHub Pages or any other host there is none,
 // so this section simply stays hidden.
-let SETTINGS = null;
+let BOX = null;
 
-async function loadSettings() {
+async function loadBoxSettings() {
   if (KIOSK) return;
   try {
     const r = await fetch("api/settings", { cache: "no-store" });
     if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) return;
-    SETTINGS = await r.json();
+    BOX = await r.json();
     renderSetup();
   } catch { /* no API here */ }
 }
 
 function renderSetup() {
   const box = $("#setup");
-  const st = SETTINGS?.router;
-  if (!SETTINGS) { box.hidden = true; return; }
-  const label = (id) => (SETTINGS.router_types.find((t) => t.id === id) || {}).label || id;
+  const st = BOX?.router;
+  if (!BOX) { box.hidden = true; return; }
+  const label = (id) => (BOX.router_types.find((t) => t.id === id) || {}).label || id;
   let cls, html;
   if (!st.type || st.type === "none") {
     cls = "invite";
@@ -310,7 +310,7 @@ function renderSetup() {
 }
 
 function openRouterDialog() {
-  const d = $("#router-dialog"), st = SETTINGS.router, types = SETTINGS.router_types;
+  const d = $("#router-dialog"), st = BOX.router, types = BOX.router_types;
   const sel = $("#r-type");
   sel.innerHTML = `<option value="">Choose…</option>` + types.map((t) => `<option value="${t.id}">${esc(t.label)}</option>`).join("");
   const fill = (keepUser) => {
@@ -327,7 +327,7 @@ function openRouterDialog() {
   $("#r-pass").value = "";
   $("#r-pass").type = "password";
   $("#r-pass").placeholder = st.has_password ? "Saved. Leave empty to keep it" : "";
-  $("#r-pin-wrap").hidden = !SETTINGS.pin_required;
+  $("#r-pin-wrap").hidden = !BOX.pin_required;
   $("#r-remove").hidden = !st.type || st.type === "none";
   $("#r-result").hidden = true;
   $("#r-show").onclick = () => { const p = $("#r-pass"); p.type = p.type === "password" ? "text" : "password"; $("#r-show").textContent = p.type === "password" ? "Show" : "Hide"; };
@@ -355,7 +355,7 @@ async function routerAction(action) {
            `${j.nodes > 1 ? `, ${j.nodes} access points` : ""}.${action === "test" ? " Press Save and connect to keep it." : " The dashboard updates in a few seconds."}`, true);
       if (action === "save") $("#r-pass").value = "";
     }
-    await loadSettings();
+    await loadBoxSettings();
     if (action !== "test") setTimeout(refresh, 3000);
   } catch (e) {
     show(`Couldn't reach the box: ${e.message}`, false);
@@ -365,5 +365,5 @@ async function routerAction(action) {
   function show(msg, ok) { out.hidden = false; out.textContent = msg; out.className = `result ${ok === true ? "good" : ok === false ? "bad" : ""}`; }
 }
 
-loadSettings();
-setInterval(loadSettings, 60_000);
+loadBoxSettings();
+setInterval(loadBoxSettings, 60_000);
