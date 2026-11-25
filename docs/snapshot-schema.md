@@ -37,3 +37,14 @@ The snapshot is the single contract between data collection and display. The col
 - Status values outside the list display as `unknown`.
 - Keep it small, ideally under 100 KB. It's fetched every 30 seconds.
 - Times without a timezone are treated as UTC.
+
+## Additions for network checks
+
+- `status` may also be `warn` ("needs a look"); `summary.warn` counts them.
+- Items may carry `note` (a plain-language finding shown instead of the status line) and `link`
+  (`{type: wired|wifi, band: "2.4"|"5"|"6", node, rssi, rate_mbps, ssid}`).
+- `extras.netcheck`: when and from which interface the checks ran.
+- `extras.exposure`: `{public_ip, nat, upnp: {available, wan_ip, mappings: [{proto, external_port, internal, description}]}}`.
+- `extras.airspace`: `{interface, own_ssids, networks: [{bssid, ssid, band, channel, signal_dbm, secure, utilisation_pct, stations, associated, own}]}`.
+- `extras.devices`: `[{mac, name, ip, vendor, first_seen, last_seen, online, new, random_mac, ssid}]` (NetAlertX).
+- `extras.topology`, `extras.clients`, `extras.client_bands`: from a router adapter (see network-checks.md).

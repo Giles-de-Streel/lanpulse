@@ -22,6 +22,8 @@ lanpulse turns a spare laptop or mini-PC into a monitoring box. It wraps proven 
 
 Local-only is the default. Nothing leaves the box unless you turn on a publisher. See [docs/cloud-options.md](docs/cloud-options.md).
 
+**Network health, not just device pings.** The box also checks for rogue DHCP servers, double NAT, ports opened to the internet by UPnP, packet loss, DNS, public IP changes, the Wi-Fi airspace and new devices, with no router password needed. Optional router adapters (ASUS/AiMesh, OpenWrt, UniFi) add wired / 2.4 / 5 / 6 GHz, access point and backhaul details. See [docs/network-checks.md](docs/network-checks.md).
+
 ## Quick start (on the box)
 
 Tested on Linux Mint 22.3 Xfce on a Dell Latitude 7380 (4 GB RAM). It should work on any Ubuntu 24.04-based system.
@@ -88,7 +90,7 @@ collector/           snapshot builder: sources -> snapshot -> publishers (Python
 box/                 docker-compose, Caddyfile, setup.sh, lanpulse.env.example
 box/scripts/         kuma-apply / export / statuspage / ntfy, kiosk-setup, backup
 examples/monitors/   example site CSV
-docs/                architecture, snapshot schema, cloud options
+docs/                architecture, snapshot schema, cloud options, network checks
 tools/publish-pages.sh  push web/ to the gh-pages branch (the live demo)
 ```
 

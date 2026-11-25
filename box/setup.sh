@@ -16,7 +16,7 @@ echo "== packages"
 apt-get update -q >/dev/null
 apt-get install -y -q docker.io docker-compose-v2 sqlite3 \
   nmap arp-scan mtr-tiny iperf3 traceroute dnsutils ethtool wavemon \
-  speedtest-cli net-tools curl snmp smartmontools >/dev/null
+  speedtest-cli net-tools curl snmp smartmontools iw miniupnpc python3 >/dev/null
 [ "$ADMIN_USER" != root ] && usermod -aG docker "$ADMIN_USER"
 systemctl enable --now docker >/dev/null
 
@@ -25,8 +25,40 @@ mkdir -p "$APP"/scripts "$APP"/data "$APP"/web "$APP"/collector
 install -m 644 "$BOX/docker-compose.yml" "$BOX/Caddyfile" "$APP/"
 install -m 755 "$BOX"/scripts/*.sh "$APP/scripts/"
 rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/"
-install -m 644 "$REPO"/collector/collector.py "$APP/collector/"
+install -m 644 "$REPO"/collector/collector.py "$REPO"/collector/netcheck.py "$APP/collector/"
 [ -f "$APP/lanpulse.env" ] || install -m 600 "$BOX/lanpulse.env.example" "$APP/lanpulse.env"
+# older installs: turn on the netcheck and router sources (router stays idle until ROUTER_TYPE is set)
+sed -i 's/^LANPULSE_SOURCES=uptime-kuma$/LANPULSE_SOURCES=uptime-kuma,netcheck,router/' "$APP/lanpulse.env"
+
+echo "== network checks (netcheck.py every 10 min)"
+cat > /etc/systemd/system/lanpulse-netcheck.service <<EOF
+[Unit]
+Description=lanpulse network health checks
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=APP=$APP
+ExecStart=/usr/bin/python3 $APP/collector/netcheck.py
+Nice=10
+TimeoutStartSec=300
+EOF
+cat > /etc/systemd/system/lanpulse-netcheck.timer <<'EOF'
+[Unit]
+Description=Run lanpulse network checks every 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now lanpulse-netcheck.timer >/dev/null 2>&1
+systemctl start --no-block lanpulse-netcheck.service
 cd "$APP"
 touch .env; chmod 600 .env
 grep -q '^SPEEDTEST_APP_KEY=' .env || echo "SPEEDTEST_APP_KEY=base64:$(openssl rand -base64 32)" >> .env

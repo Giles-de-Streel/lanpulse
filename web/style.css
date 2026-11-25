@@ -73,3 +73,28 @@ menu { display: flex; justify-content: flex-end; gap: .5rem; padding: 0; margin:
 body.kiosk { font-size: 19px; }
 body.kiosk #open-settings, body.kiosk footer a { display: none; }
 body.kiosk .tiles { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+/* needs-a-look status */
+.tile.warn { border-color: var(--pending); background: var(--pending-bg); }
+.tile.warn .dot { background: var(--pending); }
+.tile.warn .meta { color: var(--text); }
+.tile.has-note .meta { font-size: .88rem; line-height: 1.35; margin-top: .15rem; }
+.pill.warn { background: var(--pending); margin-left: .3rem; }
+.bars i.warn { background: var(--pending); opacity: .9; }
+.link { font-size: .85rem; color: var(--muted); margin-top: .15rem; }
+.weak { color: var(--down); font-weight: 600; }
+
+/* details panels */
+#details { margin-top: 2rem; }
+#details h2 { font-size: 1.15rem; }
+details { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin: .6rem 0; }
+details summary { cursor: pointer; padding: .8rem 1rem; font-weight: 600; }
+details .panel { padding: 0 1rem 1rem; }
+details h4 { margin: 1rem 0 .4rem; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; }
+.facts { padding-left: 1.1rem; margin: .3rem 0; }
+.chip { display: inline-block; padding: .1rem .55rem; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); font-size: .85rem; }
+.chip.warn { background: var(--pending-bg); border-color: var(--pending); }
