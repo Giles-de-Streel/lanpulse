@@ -39,7 +39,7 @@ Alternatively set `ROUTER_TYPE`, `ROUTER_URL`, `ROUTER_USER` and `ROUTER_PASS` i
 | `asus` | ASUS stock firmware, AiMesh, ZenWiFi | experimental, endpoints follow the open-source asusrouter project |
 | `openwrt` | OpenWrt / LuCI (ubus JSON-RPC); list several AP URLs | |
 | `unifi` | UniFi OS consoles and the classic controller | |
-| `tmobile` | T-Mobile Home Internet gateways (Arcadyan, Sagemcom, Nokia), local /TMI/v1 API, admin password from the T-Mobile app | |
+| `tmobile` | T-Mobile Home Internet gateways (Arcadyan, Sagemcom, Nokia), local /TMI/v1 API, admin password from the T-Mobile app | tested on Arcadyan TMO-G5AR 1.00.06: wired vs Wi-Fi and signal; this firmware does not report the band per device. Only the client list is read, never the Wi-Fi password, GPS or SIM details the API also exposes |
 
 Adding another: write `router_<name>(url, user, pw)` in `collector.py` that returns the normal form documented above `ROUTERS`, and add it to `ROUTERS`. Good candidates: TP-Link Omada, eero (cloud API), MikroTik (REST), Netgear Orbi, pfSense/OPNsense, and SNMP for managed switches (LLDP neighbours, port speed).
 

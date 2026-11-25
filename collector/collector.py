@@ -318,18 +318,23 @@ def router_tmobile(url, user, pw):
     name = f"{dev.get('manufacturer', '')} {dev.get('model', 'T-Mobile gateway')}".strip()
     clients = []
     groups = (tel or {}).get("clients", {}) if isinstance(tel, dict) else {}
+    shape = {}                                   # group name -> field names (no values), for diagnosing firmware variants
     for key, members in groups.items():
         k = key.lower()
         wired = "eth" in k or "lan" in k
         band = None if wired else "2.4" if k.startswith("2") else "6" if k.startswith("6") else "5" if k.startswith("5") else None
+        shape[key] = sorted({f for c in (members or []) if isinstance(c, dict) for f in c})
         for c in members or []:
+            rssi = _num(c.get("signal"))
+            if rssi is not None and (rssi >= 0 or rssi <= -120):   # 0 / -200 = not reported
+                rssi = None
             clients.append({"mac": (c.get("mac") or "").upper(), "ip": c.get("ipv4"), "name": c.get("name"),
                             "online": c.get("connected", True),
                             "link": {"type": "wired" if wired else "wifi", "band": band, "node": name,
-                                     "rssi": _num(c.get("signal"))}})
+                                     "rssi": rssi, "group": key}})
     node = {"name": name, "mac": (dev.get("macId") or "").upper() or None, "ip": urllib.parse.urlparse(url).hostname,
             "model": dev.get("model"), "role": "router", "online": True, "firmware": dev.get("softwareVersion"),
-            "backhaul": None, "clients": len(clients)}
+            "backhaul": None, "clients": len(clients), "client_groups": shape}
     return {"vendor": "tmobile", "nodes": [node], "clients": clients}
 
 
@@ -460,7 +465,7 @@ def source_router():
                       "link": bh})
     bands = {}
     for c in data["clients"]:
-        k = "wired" if c["link"]["type"] == "wired" else f"{c['link'].get('band') or '?'} GHz"
+        k = "wired" if c["link"]["type"] == "wired" else (f"{c['link']['band']} GHz" if c['link'].get('band') else "Wi-Fi (band not reported)")
         bands[k] = bands.get(k, 0) + 1
     return {"groups": [{"name": "Network equipment", "items": items}] if items else [],
             "extras": {"topology": {"vendor": data["vendor"], "nodes": data["nodes"]},
@@ -737,7 +742,7 @@ class SettingsAPI(BaseHTTPRequestHandler):
             return self._send(200, {"ok": False, "error": f"Couldn't connect: {str(e)[:200]}"})
         bands = {}
         for c in data["clients"]:
-            k = "wired" if c["link"]["type"] == "wired" else f"{c['link'].get('band') or '?'} GHz"
+            k = "wired" if c["link"]["type"] == "wired" else (f"{c['link']['band']} GHz" if c['link'].get('band') else "Wi-Fi (band not reported)")
             bands[k] = bands.get(k, 0) + 1
         out = {"ok": True, "nodes": len(data["nodes"]), "clients": len(data["clients"]), "client_bands": bands}
         if action == "save":
