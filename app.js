@@ -3,6 +3,17 @@ import { PROVIDERS } from "./providers.js";
 const $ = (s, el = document) => el.querySelector(s);
 const params = new URLSearchParams(location.search);
 const KIOSK = params.has("kiosk");
+const VIEW = params.get("view");          // "devices" | "wifi": full-page detail views
+const FROM_KIOSK_VIEW = VIEW && params.get("from") === "kiosk";
+// tiles that open a detail page
+const TILE_VIEWS = { "net-devices": ["devices", "See every device"], "net-weak-wifi": ["wifi", "See every device's signal"] };
+function viewHref(view) {
+  const p = new URLSearchParams(location.search);
+  ["kiosk", "admin", "from", "r", "view"].forEach((k) => p.delete(k));
+  p.set("view", view);
+  if (KIOSK) p.set("from", "kiosk");
+  return `./?${p}`;
+}
 const REFRESH_MS = 30_000;
 const STALE_MS = 3 * 60_000;
 
@@ -47,6 +58,7 @@ const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const pct = (u) => (u == null ? "" : `${(u * 100).toFixed(u >= 0.9995 ? 0 : 1)}%`);
 
 function render(snap) {
+  if (VIEW) { LAST_SNAP = snap; return renderView(snap); }
   LAST_SNAP = snap;
   const site = snap.site || {};
   document.title = site.name || "lanpulse";
@@ -112,6 +124,7 @@ function render(snap) {
           <div class="name">${esc(i.name)}</div>
           <div class="meta">${i.note ? esc(i.note) : meta}</div>
           ${i.hint && i.status !== "up" ? `<div class="hint">What to do: ${esc(i.hint)}</div>` : ""}
+          ${TILE_VIEWS[i.id] ? `<a class="more" href="${viewHref(TILE_VIEWS[i.id][0])}"${KIOSK ? "" : ` target="_blank" rel="noopener"`}>${TILE_VIEWS[i.id][1]} ↗</a>` : ""}
           ${i.link && !i.note ? `<div class="link">${linkText(i.link)}</div>` : ""}
           ${bars ? `<div class="bars">${bars}</div>` : ""}
         </div>
@@ -629,3 +642,175 @@ async function routerAction(action) {
 
 loadBoxSettings();
 setInterval(loadBoxSettings, 60_000);
+
+// ---------------------------------------------------------------- detail pages (?view=devices | wifi)
+const viewState = { filter: "all", q: "", sort: null, dir: 1 };
+const RATING = [[-50, "excellent", "Excellent"], [-67, "good", "Good"], [-70, "fair", "Fair"], [-80, "weak", "Weak"], [-999, "poor", "Poor"]];
+const rate = (rssi) => (rssi == null ? null : RATING.find(([min]) => rssi >= min));
+
+function mergedDevices(x) {
+  // NetAlertX devices + router clients, matched by MAC (or IP)
+  const out = new Map();
+  for (const d of x.devices || []) out.set((d.mac || d.ip || "").toUpperCase(), { ...d });
+  for (const c of x.clients || []) {
+    const k = (c.mac || c.ip || "").toUpperCase();
+    const byIp = [...out.values()].find((d) => d.ip && d.ip === c.ip);
+    const d = out.get(k) || byIp || {};
+    if (byIp && !out.get(k)) out.delete((byIp.mac || byIp.ip || "").toUpperCase());
+    out.set((d.mac || k).toUpperCase(), { ...d, mac: d.mac || c.mac, ip: d.ip || c.ip, name: d.name || c.name,
+      online: d.online ?? c.online, link: c.link });
+  }
+  return [...out.values()];
+}
+
+function dashboardHref() {
+  const p = new URLSearchParams(location.search);
+  p.delete("view");
+  const s = p.toString();
+  return "./" + (s ? "?" + s : "");
+}
+
+function renderView(snap) {
+  const x = snap.extras || {}, site = snap.site || {};
+  for (const id of ["#banner", "#groups", "#details", "#setup", "#warning", "#admin-panel"]) { const e = $(id); if (e) e.hidden = true; }
+  const v = $("#view");
+  v.hidden = false;
+  const title = VIEW === "wifi" ? "Wi-Fi signal of devices" : "Devices on the network";
+  document.title = `${title} · ${site.name || "lanpulse"}`;
+  $("#site-name").textContent = title;
+  $("#site-desc").textContent = site.name || "";
+  $("#updated").textContent = snap.generated ? `Updated ${ago(snap.generated)}` : "";
+  $("#updated").dataset.t = snap.generated || "";
+  if (!v.dataset.built) {
+    v.dataset.built = VIEW;
+    const back = FROM_KIOSK_VIEW ? `<a class="button" href="./?kiosk">← Back to wall screen</a>`
+                                 : `<a class="button ghost" href="${dashboardHref()}">← Dashboard</a>`;
+    const filters = VIEW === "wifi"
+      ? [["all", "All"], ["poor", "Poor"], ["weak", "Weak"], ["fair", "Fair"], ["good", "Good"], ["excellent", "Excellent"]]
+      : [["all", "All"], ["online", "Online"], ["new", "New"], ["offline", "Offline"], ["wired", "Wired"], ["wifi", "Wi-Fi"], ["weak", "Weak signal"], ["unnamed", "Unnamed"]];
+    v.innerHTML = `
+      <div class="view-bar">${back}
+        <input id="v-q" type="search" placeholder="Search name, IP, MAC, maker, access point…" autocomplete="off">
+        <div class="chips" id="v-filters">${filters.map(([k, l]) => `<button class="chip${k === viewState.filter ? " on" : ""}" data-f="${k}">${l} <span></span></button>`).join("")}</div>
+      </div>
+      <div id="v-summary"></div>
+      <div id="v-table"></div>
+      ${FROM_KIOSK_VIEW ? `<p class="help">Returns to the wall screen by itself after 5 minutes.</p>` : ""}`;
+    $("#v-q").addEventListener("input", (e) => { viewState.q = e.target.value.toLowerCase(); renderView(LAST_SNAP); });
+    $("#v-filters").addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      viewState.filter = b.dataset.f;
+      v.querySelectorAll("#v-filters .chip").forEach((c) => c.classList.toggle("on", c === b));
+      renderView(LAST_SNAP);
+    });
+    if (FROM_KIOSK_VIEW) {
+      let t;
+      const arm = () => { clearTimeout(t); t = setTimeout(() => { location.href = "./?kiosk"; }, 5 * 60_000); };
+      ["pointerdown", "keydown", "scroll"].forEach((ev) => addEventListener(ev, arm, { passive: true }));
+      arm();
+    }
+  }
+  (VIEW === "wifi" ? viewWifi : viewDevices)(x);
+}
+
+function sortable(cols, rows, render) {
+  // cols: [key, label, valueFn]; clicking a header sorts by it
+  if (viewState.sort) {
+    const c = cols.find((k) => k[0] === viewState.sort);
+    if (c) rows.sort((a, b) => {
+      const A = c[2](a), B = c[2](b);
+      if (A == null && B == null) return 0;
+      if (A == null) return 1;
+      if (B == null) return -1;
+      return (typeof A === "number" && typeof B === "number" ? A - B : String(A).localeCompare(String(B), undefined, { numeric: true })) * viewState.dir;
+    });
+  }
+  const head = cols.map(([k, l]) => `<th data-k="${k}" class="sort${viewState.sort === k ? (viewState.dir > 0 ? " asc" : " desc") : ""}">${l}</th>`).join("");
+  $("#v-table").innerHTML = rows.length
+    ? `<div class="scroll"><table class="view-table"><thead><tr>${head}</tr></thead><tbody>${rows.map(render).join("")}</tbody></table></div>`
+    : `<p class="help">Nothing matches.</p>`;
+  $("#v-table").querySelectorAll("th.sort").forEach((th) => th.addEventListener("click", () => {
+    viewState.dir = viewState.sort === th.dataset.k ? -viewState.dir : 1;
+    viewState.sort = th.dataset.k;
+    renderView(LAST_SNAP);
+  }));
+}
+
+const ipNum = (ip) => (ip || "").split(".").reduce((a, n) => a * 256 + (+n || 0), 0) || null;
+const tsOf = (s) => (s ? Date.parse(String(s).replace(" ", "T") + (/[Z+]/.test(String(s).slice(10)) ? "" : "Z")) : null);
+const matches = (d) => !viewState.q || [d.name, d.ip, d.mac, d.vendor, d.link?.node, d.link?.band && `${d.link.band} ghz`]
+  .some((f) => f && String(f).toLowerCase().includes(viewState.q));
+
+function viewDevices(x) {
+  const all = mergedDevices(x);
+  const weakAt = -70;
+  const test = {
+    all: () => true, online: (d) => d.online, offline: (d) => !d.online, new: (d) => d.new,
+    wired: (d) => d.link?.type === "wired", wifi: (d) => d.link?.type === "wifi",
+    weak: (d) => d.link?.rssi != null && d.link.rssi < weakAt, unnamed: (d) => !d.name,
+  };
+  $("#v-filters").querySelectorAll(".chip").forEach((c) => { $("span", c).textContent = all.filter(test[c.dataset.f]).length; });
+  const rows = all.filter(test[viewState.filter] || test.all).filter(matches);
+  if (!viewState.sort) rows.sort((a, b) => ((b.new ? 1 : 0) - (a.new ? 1 : 0)) || ((b.online ? 1 : 0) - (a.online ? 1 : 0)) || (ipNum(a.ip) - ipNum(b.ip)));
+  const conn = (d) => (d.link ? linkText(d.link) : `<span class="help">${x.clients ? "not in router's list" : "connect a router to see"}</span>`);
+  $("#v-summary").innerHTML = `<p class="help">${all.filter((d) => d.online).length} online now, ${all.length} seen in total.
+    ${x.clients ? "Connection details come from the router." : "Connect your router (admin view) to see wired / 2.4 / 5 GHz and signal for each device."}
+    Names and makers come from the device finder (NetAlertX); rename devices there.</p>`;
+  sortable([
+    ["state", "", (d) => (d.online ? 0 : 1)], ["name", "Name", (d) => d.name || ""], ["vendor", "Maker", (d) => d.vendor || ""],
+    ["ip", "IP address", (d) => ipNum(d.ip)], ["mac", "MAC", (d) => d.mac || ""], ["conn", "Connection", (d) => d.link?.type || ""],
+    ["rssi", "Signal", (d) => d.link?.rssi ?? null], ["first", "First seen", (d) => tsOf(d.first_seen)], ["last", "Last seen", (d) => tsOf(d.last_seen)],
+  ], rows, (d) => `<tr class="${d.online ? "" : "off"}">
+      <td><span class="sdot ${d.online ? "up" : ""}" title="${d.online ? "online" : "offline"}"></span></td>
+      <td>${esc(d.name || "") || `<span class="help">(no name)</span>`} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</td>
+      <td>${esc(d.vendor || "")}${d.random_mac ? ` <span class="help" title="Phones and laptops often use a changing private address">private MAC</span>` : ""}</td>
+      <td>${esc(d.ip || "")}</td><td class="mono">${esc(d.mac || "")}</td><td>${conn(d)}</td>
+      <td>${d.link?.rssi != null ? `<span class="${d.link.rssi < weakAt ? "weak" : ""}">${Math.round(d.link.rssi)} dBm</span>` : ""}</td>
+      <td>${esc(d.first_seen ? ago(d.first_seen) : "")}</td><td>${esc(d.last_seen ? ago(d.last_seen) : "")}</td></tr>`);
+}
+
+function viewWifi(x) {
+  const wifi = (x.clients || []).filter((c) => c.link?.type === "wifi");
+  if (!wifi.length) {
+    $("#v-summary").innerHTML = `<p class="warning">No signal data yet. Sign in to the admin view and connect your router: it reports each Wi-Fi device's signal.</p>`;
+    $("#v-table").innerHTML = "";
+    return;
+  }
+  const withSig = wifi.filter((c) => c.link.rssi != null);
+  const level = (c) => rate(c.link.rssi)?.[1] || "unknown";
+  $("#v-filters").querySelectorAll(".chip").forEach((c) => {
+    $("span", c).textContent = c.dataset.f === "all" ? wifi.length : withSig.filter((w) => level(w) === c.dataset.f).length;
+  });
+  const aps = {};
+  for (const c of withSig) {
+    const k = c.link.node || "(unknown)";
+    (aps[k] ||= []).push(c.link.rssi);
+  }
+  const apRows = Object.entries(aps).sort((a, b) => b[1].length - a[1].length).map(([n, s]) =>
+    `<tr><td>${esc(n)}</td><td>${s.length}</td><td>${Math.round(s.reduce((a, b) => a + b, 0) / s.length)} dBm</td><td>${Math.round(Math.min(...s))} dBm</td></tr>`).join("");
+  const counts = RATING.map(([, k, l]) => `<span class="rate ${k}">${l}: ${withSig.filter((c) => level(c) === k).length}</span>`).join(" ");
+  $("#v-summary").innerHTML = `
+    <div class="rates">${counts}${wifi.length > withSig.length ? ` <span class="help">${wifi.length - withSig.length} not reported</span>` : ""}</div>
+    <p class="help">Signal as the router hears each device. Excellent −50 dBm or better · Good to −67 · Fair to −70 (video calls OK) · Weak to −80 · Poor below −80.
+      For weak devices: move the router more centrally and higher, add a mesh point or access point near them, or use a cable for things that never move.</p>
+    ${Object.keys(aps).length > 1 ? `<details open><summary>By access point</summary><div class="panel"><table><thead><tr><th>Access point</th><th>Devices</th><th>Average</th><th>Weakest</th></tr></thead><tbody>${apRows}</tbody></table></div></details>` : ""}`;
+  const rows = wifi.filter((c) => viewState.filter === "all" || level(c) === viewState.filter).filter(matches);
+  if (!viewState.sort) rows.sort((a, b) => (a.link.rssi ?? 0) - (b.link.rssi ?? 0));
+  const bar = (r) => {
+    if (r == null) return "";
+    const p = Math.max(4, Math.min(100, (r + 95) * 100 / 55));
+    return `<span class="sigbar"><i class="${rate(r)[1]}" style="width:${p.toFixed(0)}%"></i></span>`;
+  };
+  sortable([
+    ["name", "Device", (c) => c.name || ""], ["ip", "IP address", (c) => ipNum(c.ip)], ["node", "Access point", (c) => c.link.node || ""],
+    ["band", "Band", (c) => (c.link.band ? +c.link.band : null)], ["rssi", "Signal", (c) => c.link.rssi ?? null],
+    ["rating", "Rating", (c) => c.link.rssi ?? null], ["rate", "Link speed", (c) => c.link.rate_mbps ?? null],
+  ], rows, (c) => {
+    const r = rate(c.link.rssi);
+    return `<tr>
+      <td>${esc(c.name || "") || `<span class="help">(no name)</span>`}</td><td>${esc(c.ip || "")}</td><td>${esc(c.link.node || "")}</td>
+      <td>${c.link.band ? `${c.link.band} GHz` : `<span class="help">not reported</span>`}</td>
+      <td class="sigcell">${bar(c.link.rssi)} ${c.link.rssi != null ? `${Math.round(c.link.rssi)} dBm` : `<span class="help">not reported</span>`}</td>
+      <td>${r ? `<span class="rate ${r[1]}">${r[2]}</span>` : ""}</td><td>${c.link.rate_mbps ? `${Math.round(c.link.rate_mbps)} Mbps` : ""}</td></tr>`;
+  });
+}
