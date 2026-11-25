@@ -87,7 +87,12 @@ function renderQuick(items, x) {
     return `<a class="qbtn" href="${viewHref(TILE_VIEWS[i.id][0])}"${KIOSK ? "" : ` target="_blank" rel="noopener"`} title="${esc(i.note || i.message || "")}">
       <b>${esc(names[i.id] || i.name)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}<i aria-hidden="true">↗</i></a>`;
   }).join("");
-  el.hidden = !items.length;
+  if (x.history) {
+    const n = historyCount(x, 1);
+    el.insertAdjacentHTML("beforeend", `<a class="qbtn" href="${viewHref("history")}"${KIOSK ? "" : ` target="_blank" rel="noopener"`}>
+      <b>History</b><span>${n ? `${n} outage${n === 1 ? "" : "s"} in 24 h` : "no outages in 24 h"}</span><i aria-hidden="true">↗</i></a>`);
+  }
+  el.hidden = !el.children.length;
 }
 
 function render(snap) {
@@ -535,10 +540,59 @@ function adminHealth() {
     (nc ? `<p class="help">Network checks last ran ${esc(ago(nc.generated))} from ${esc(nc.interface || "?")} (${esc(nc.interface_kind || "")}), gateway ${esc(nc.gateway || "?")}.</p>` : "");
 }
 
+// Phone alerts come from Uptime Kuma through ntfy. The topic is shown only here (signed in):
+// on a public ntfy server, anyone who knows the topic can read the alerts.
+const NTFY_APPS = [
+  ["Android (Google Play)", "https://play.google.com/store/apps/details?id=io.heckel.ntfy"],
+  ["Android (F-Droid)", "https://f-droid.org/packages/io.heckel.ntfy/"],
+  ["iPhone / iPad (App Store)", "https://apps.apple.com/app/ntfy/id1625396347"],
+];
+function alertsCard() {
+  const t = (BOX?.alerts || []).filter((a) => a.active);
+  const apps = `<div class="applinks">${NTFY_APPS.map(([n, u]) => `<a class="button ghost" href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`;
+  if (!t.length) return `<p>Alerts are sent to phones with the free <b>ntfy</b> app.</p>${apps}
+    <p class="help">No phone-alert topic is set up yet. On the box run <code>sudo /opt/monitor/scripts/kuma-ntfy.sh</code>, or add an ntfy notification in Uptime Kuma.</p>`;
+  return `<p>Get a notification when something stops responding: install the free <b>ntfy</b> app, then subscribe to this topic.</p>
+    ${apps}
+    ${t.map((a) => `<div class="topic">
+      <div><span class="help">Topic</span><code class="sel">${esc(a.topic)}</code><button class="ghost small" data-copy="${esc(a.topic)}">Copy</button></div>
+      <div><span class="help">Server</span><code class="sel">${esc(a.server)}</code>${a.server === "https://ntfy.sh" ? ` <span class="help">(the app's default)</span>` : ` <span class="help">(in the app: “Use another server”)</span>`}</div>
+      <a href="${esc(a.server)}/${encodeURIComponent(a.topic)}" target="_blank" rel="noopener">Open this topic in a web browser ↗</a>
+    </div>`).join("")}
+    <p class="help">In the app: tap <b>+</b>, enter the topic, tap Subscribe. Keep the topic private: anyone who has it can read these alerts.</p>
+    <button id="ap-ntfy-test" class="ghost">Send a test alert</button> <span id="ap-ntfy-result" class="result" hidden></span>`;
+}
+function wireAlertsCard() {
+  const box = $("#ap-alerts");
+  if (!box) return;
+  box.onclick = async (e) => {
+    const c = e.target.closest("[data-copy]");
+    if (c) {
+      try { await navigator.clipboard.writeText(c.dataset.copy); c.textContent = "Copied"; }
+      catch { const sel = c.previousElementSibling; getSelection().selectAllChildren(sel); c.textContent = "Selected: press Ctrl+C"; }
+      setTimeout(() => (c.textContent = "Copy"), 2500);
+      return;
+    }
+    if (e.target.id === "ap-ntfy-test") {
+      const out = $("#ap-ntfy-result");
+      const say = (m, ok) => { out.hidden = false; out.className = `result ${ok ? "good" : "bad"}`; out.textContent = m; };
+      try {
+        const [r, j] = await api("api/alerts/test", { method: "POST", body: "{}" });
+        say(r.ok ? "Sent: check your phone." : j.error || `Failed (HTTP ${r.status})`, r.ok);
+      } catch (err) { say(`Couldn't reach the box: ${err.message}`); }
+    }
+  };
+}
+
 function renderAdminPanel() {
   const p = $("#admin-panel");
   document.body.classList.add("admin-view");
-  if (p.dataset.done) { $("#ap-health").innerHTML = adminHealth(); return; }   // keep forms intact
+  if (p.dataset.done) {   // keep forms intact; refresh only the live parts
+    $("#ap-health").innerHTML = adminHealth();
+    const a = $("#ap-alerts"), n = String((BOX?.alerts || []).length);
+    if (a && a.dataset.n !== n) { a.innerHTML = alertsCard(); a.dataset.n = n; }
+    return;
+  }
   p.dataset.done = "1";
   const host = location.hostname;
   const tool = (port, name, what) => `<a class="toolcard" href="http://${host}:${port}/" target="${FROM_KIOSK ? "_self" : "_blank"}" rel="noopener"><b>${name}</b><span>${what}</span></a>`;
@@ -560,6 +614,7 @@ function renderAdminPanel() {
           ${tool(8765, "Speedtest Tracker", "Internet speed history and test schedule")}
         </div>
       </div>
+      <div class="admin-card"><h3>Phone alerts</h3><div id="ap-alerts">${alertsCard()}</div></div>
       <div class="admin-card"><h3>Box health</h3><div id="ap-health">${adminHealth()}</div></div>
       <div class="admin-card"><h3>Administrator password</h3>
         <form id="ap-pw" autocomplete="off">
@@ -577,6 +632,7 @@ function renderAdminPanel() {
   const setup = $("#setup");
   $("#ap-router").append(setup);
   setup.hidden = !BOX;
+  wireAlertsCard();
   $("#ap-signout").onclick = async () => {
     try { await api("api/logout", { method: "POST", body: "{}" }); } catch {}
     location.href = FROM_KIOSK ? "./?kiosk" : "./";
@@ -691,7 +747,7 @@ loadBoxSettings();
 setInterval(loadBoxSettings, 60_000);
 
 // ---------------------------------------------------------------- detail pages (?view=devices | wifi)
-const viewState = { filter: "all", q: "", sort: null, dir: 1 };
+const viewState = { filter: VIEW === "history" ? "7" : "all", q: "", sort: null, dir: 1 };
 const RATING = [[-50, "excellent", "Excellent"], [-67, "good", "Good"], [-70, "fair", "Fair"], [-80, "weak", "Weak"], [-999, "poor", "Poor"]];
 const rate = (rssi) => (rssi == null ? null : RATING.find(([min]) => rssi >= min));
 
@@ -722,7 +778,7 @@ function renderView(snap) {
   for (const id of ["#banner", "#groups", "#details", "#setup", "#warning", "#admin-panel"]) { const e = $(id); if (e) e.hidden = true; }
   const v = $("#view");
   v.hidden = false;
-  const title = VIEW === "wifi" ? "Wi-Fi signal of devices" : "Devices on the network";
+  const title = VIEW === "wifi" ? "Wi-Fi signal of devices" : VIEW === "history" ? "History" : "Devices on the network";
   document.title = `${title} · ${site.name || "lanpulse"}`;
   $("#site-name").textContent = title;
   $("#site-desc").textContent = site.name || "";
@@ -732,12 +788,13 @@ function renderView(snap) {
     v.dataset.built = VIEW;
     const back = FROM_KIOSK_VIEW ? `<a class="button" href="./?kiosk">← Back to wall screen</a>`
                                  : `<a class="button ghost" href="${dashboardHref()}">← Dashboard</a>`;
-    const filters = VIEW === "wifi"
+    const filters = VIEW === "history" ? [["1", "24 hours"], ["7", "7 days"], ["30", "30 days"]]
+      : VIEW === "wifi"
       ? [["all", "All"], ["poor", "Poor"], ["weak", "Weak"], ["fair", "Fair"], ["good", "Good"], ["excellent", "Excellent"]]
       : [["all", "All"], ["online", "Online"], ["new", "New"], ["offline", "Offline"], ["wired", "Wired"], ["wifi", "Wi-Fi"], ["weak", "Weak signal"], ["unnamed", "Unnamed"]];
     v.innerHTML = `
       <div class="view-bar">${back}
-        <input id="v-q" type="search" placeholder="Search name, IP, MAC, maker, access point…" autocomplete="off">
+        <input id="v-q" type="search" placeholder="${VIEW === "history" ? "Search by device or check name…" : "Search name, IP, MAC, maker, access point…"}" autocomplete="off">
         <div class="chips" id="v-filters">${filters.map(([k, l]) => `<button class="chip${k === viewState.filter ? " on" : ""}" data-f="${k}">${l} <span></span></button>`).join("")}</div>
       </div>
       <div id="v-summary"></div>
@@ -757,7 +814,7 @@ function renderView(snap) {
       arm();
     }
   }
-  (VIEW === "wifi" ? viewWifi : viewDevices)(x);
+  (VIEW === "wifi" ? viewWifi : VIEW === "history" ? viewHistory : viewDevices)(x);
 }
 
 function sortable(cols, rows, render) {
@@ -861,4 +918,126 @@ function viewWifi(x) {
       <td class="sigcell">${bar(c.link.rssi)} ${c.link.rssi != null ? `${Math.round(c.link.rssi)} dBm` : `<span class="help">not reported</span>`}</td>
       <td>${r ? `<span class="rate ${r[1]}">${r[2]}</span>` : ""}</td>${hasRate ? `<td>${c.link.rate_mbps ? `${Math.round(c.link.rate_mbps)} Mbps` : ""}</td>` : ""}</tr>`;
   });
+}
+
+// ---------------------------------------------------------------- History page (?view=history)
+function fmtDur(s) {
+  if (s == null) return "";
+  if (s < 60) return `${Math.max(1, Math.round(s))} s`;
+  if (s < 3600) return `${Math.round(s / 60)} min`;
+  if (s < 86400) { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return m ? `${h} h ${m} min` : `${h} h`; }
+  const d = Math.floor(s / 86400), h = Math.round((s % 86400) / 3600);
+  return h ? `${d} d ${h} h` : `${d} d`;
+}
+const whenText = (iso) => {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+};
+// outages that overlap the last `days` days, with the downtime inside that window
+function outagesIn(m, days) {
+  const from = Date.now() - days * 86400_000;
+  return (m.outages || []).map(([a, b, s]) => {
+    const A = Date.parse(a), B = b ? Date.parse(b) : Date.now();
+    return { start: a, end: b, dur: s, inside: Math.max(0, (B - Math.max(A, from)) / 1000) };
+  }).filter((o) => (o.end ? Date.parse(o.end) : Date.now()) >= from);
+}
+function historyCount(x, days) {
+  return (x.history?.monitors || []).reduce((n, m) => n + outagesIn(m, days).length, 0);
+}
+
+function viewHistory(x) {
+  const h = x.history || {};
+  const days = +viewState.filter || 7;
+  const from = Date.now() - days * 86400_000;
+  $("#v-filters").querySelectorAll(".chip span").forEach((s) => (s.textContent = ""));
+  if (!h.monitors && !(h.changes || []).length) {
+    $("#v-summary").innerHTML = `<p class="warning">No history yet. It is collected from Uptime Kuma and the network checks, and fills in over the first hours.</p>`;
+    $("#v-table").innerHTML = "";
+    return;
+  }
+  const q = viewState.q;
+  const mons = (h.monitors || []).filter((m) => !q || m.name.toLowerCase().includes(q));
+
+  // per check: uptime, outages, downtime, and a strip of hours (24 h) or days
+  const rows = mons.map((m) => {
+    const src = days === 1 ? (m.hourly || []).filter(([t]) => t * 1000 >= from - 3600_000) : (m.daily || []).filter(([t]) => t * 1000 >= from - 86400_000);
+    const up = src.reduce((a, r) => a + r[1], 0), down = src.reduce((a, r) => a + r[2], 0);
+    const outs = outagesIn(m, days);
+    const cells = [];
+    const step = days === 1 ? 3600 : 86400, n = days === 1 ? 24 : days;
+    const end = Math.floor(Date.now() / 1000 / step) * step;
+    const by = new Map(src.map((r) => [r[0], r]));
+    for (let k = n - 1; k >= 0; k--) {
+      const t = end - k * step, r = by.get(t);
+      const pct = r && r[1] + r[2] ? r[1] / (r[1] + r[2]) : null;
+      const cls = pct == null ? "none" : pct >= 0.9999 ? "up" : pct >= 0.98 ? "dip" : "down";
+      const label = new Date(t * 1000).toLocaleString(undefined, days === 1 ? { hour: "numeric" } : { month: "short", day: "numeric" });
+      cells.push(`<i class="${cls}" title="${esc(label)}: ${pct == null ? "no data" : `${(pct * 100).toFixed(pct >= 0.9995 ? 0 : 1)}% up`}"></i>`);
+    }
+    return { m, pct: up + down ? up / (up + down) : null, up, down, outs,
+             downtime: outs.reduce((a, o) => a + o.inside, 0), strip: cells.join("") };
+  }).sort((a, b) => (a.pct ?? 2) - (b.pct ?? 2) || b.outs.length - a.outs.length || a.m.name.localeCompare(b.m.name));
+
+  const allOut = rows.flatMap((r) => r.outs.map((o) => ({ ...o, name: r.m.name })));
+  const longest = allOut.reduce((a, o) => (o.dur > (a?.dur || 0) ? o : a), null);
+  const totUp = rows.reduce((a, r) => a + r.up, 0), totDown = rows.reduce((a, r) => a + r.down, 0);
+  const range = days === 1 ? "24 hours" : `${days} days`;
+  const started = h.from && Date.parse(h.from) > from ? `<p class="help">History started ${esc(whenText(h.from))}, so this covers less than ${range}.</p>` : "";
+  const card = (big, small, cls = "") => `<div class="hcard ${cls}"><b>${big}</b><span>${small}</span></div>`;
+  $("#v-summary").innerHTML = `
+    <div class="hcards">
+      ${card(allOut.length, `outage${allOut.length === 1 ? "" : "s"} in ${range}`, allOut.length ? "bad" : "good")}
+      ${card(allOut.length ? fmtDur(allOut.reduce((a, o) => a + o.inside, 0)) : "none", "total downtime")}
+      ${card(longest ? fmtDur(longest.dur) : "none", longest ? `longest: ${esc(longest.name)}` : "longest outage")}
+      ${card(totUp + totDown ? `${((totUp / (totUp + totDown)) * 100).toFixed(totUp === totUp + totDown ? 0 : 2)}%` : "–", "of all checks succeeded")}
+    </div>${started}`;
+
+  // timeline: Kuma outages/recoveries + changes in the network checks, newest first
+  const label = { up: "OK", warn: "needs a look", down: "problem", unknown: "unknown", pending: "checking", maintenance: "maintenance" };
+  const ev = [
+    ...(h.events || []).filter((e) => !e.first && (e.s === "down" || (e.s === "up" && e.dur_s != null) || e.s === "maintenance"))
+      .map((e) => ({ t: e.t, s: e.s, name: e.name,
+        text: e.s === "down" ? `stopped responding${e.msg ? `: ${e.msg}` : ""}` : e.s === "up" ? `back up after ${fmtDur(e.dur_s)}` : "maintenance started" })),
+    ...(h.changes || []).map((c) => ({ t: c.t, s: c.s === "up" ? "up" : c.s === "down" ? "down" : "warn", name: c.name,
+        text: `${label[c.from] || c.from} → ${label[c.s] || c.s}${c.msg ? `: ${c.msg}` : ""}` })),
+  ].filter((e) => Date.parse(e.t) >= from && (!q || e.name.toLowerCase().includes(q))).sort((a, b) => b.t.localeCompare(a.t));
+
+  // speed tests and newly seen devices in the range
+  const speed = ((x.speed || {}).history || []).filter((r) => Date.parse(r.at) >= from);
+  const devs = x.devices || [];
+  const firstSweep = Math.min(...devs.map((d) => tsOf(d.first_seen)).filter(Boolean));
+  const newDevs = devs.filter((d) => !d.this_box && tsOf(d.first_seen) >= from && tsOf(d.first_seen) > firstSweep + 3600_000)
+    .sort((a, b) => tsOf(b.first_seen) - tsOf(a.first_seen));
+
+  const speedSvg = () => {
+    const ok = speed.filter((r) => r.ok && r.down_mbps);
+    if (!ok.length) return "";
+    const max = Math.max(...ok.map((r) => r.down_mbps)), w = 600, ht = 90, bw = w / ok.length;
+    return `<svg class="speedchart" viewBox="0 0 ${w} ${ht}" preserveAspectRatio="none" role="img" aria-label="Download speed per test">${ok.map((r, i) => {
+      const y = ht - (r.down_mbps / max) * (ht - 4);
+      return `<rect x="${(i * bw + 1).toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${(ht - y).toFixed(1)}" rx="2"><title>${esc(whenText(r.at))}: ${r.down_mbps} down / ${r.up_mbps ?? "?"} up Mbps</title></rect>`;
+    }).join("")}</svg>`;
+  };
+
+  $("#v-table").innerHTML = `
+    <h3 class="hhead">Uptime by check <span class="help">${days === 1 ? "each square is an hour" : "each square is a day"} · worst first</span></h3>
+    ${rows.length ? `<div class="scroll"><table class="view-table htable"><thead><tr><th>Check</th><th>${days === 1 ? "Last 24 hours" : `Last ${days} days`}</th><th>Uptime</th><th>Outages</th><th>Downtime</th></tr></thead><tbody>
+      ${rows.map((r) => `<tr><td>${esc(r.m.name)}</td><td><span class="hstrip">${r.strip}</span></td>
+        <td class="${r.pct != null && r.pct < 0.99 ? "weak" : ""}">${r.pct == null ? "–" : `${(r.pct * 100).toFixed(r.pct >= 0.9995 ? 0 : 2)}%`}</td>
+        <td>${r.outs.length || ""}</td><td>${r.downtime ? fmtDur(r.downtime) : ""}</td></tr>`).join("")}
+    </tbody></table></div>` : `<p class="help">Nothing matches.</p>`}
+
+    <h3 class="hhead">What happened <span class="help">outages, recoveries and changes in the network checks, newest first</span></h3>
+    ${ev.length ? `<ul class="timeline">${ev.slice(0, 150).map((e) => `<li class="${e.s}"><time>${esc(whenText(e.t))}</time><b>${esc(e.name)}</b> ${esc(e.text)}</li>`).join("")}</ul>`
+      : `<p class="help">Nothing went down or changed in the last ${range}.</p>`}
+
+    ${speed.length ? `<h3 class="hhead">Internet speed tests <span class="help">${speed.length} in ${range}</span></h3>${speedSvg()}
+      <div class="scroll"><table class="view-table"><thead><tr><th>When</th><th>Down (Mbps)</th><th>Up (Mbps)</th><th>Ping (ms)</th></tr></thead><tbody>
+      ${[...speed].reverse().slice(0, 30).map((r) => `<tr><td>${esc(whenText(r.at))}</td><td>${r.ok ? r.down_mbps ?? "" : `<span class="weak">failed</span>`}</td><td>${r.up_mbps ?? ""}</td><td>${r.ping_ms != null ? Math.round(r.ping_ms) : ""}</td></tr>`).join("")}
+      </tbody></table></div>` : ""}
+
+    <h3 class="hhead">Devices first seen <span class="help">in the last ${range}</span></h3>
+    ${newDevs.length ? `<div class="scroll"><table class="view-table"><thead><tr><th>First seen</th><th>Name</th><th>Maker</th><th>IP address</th></tr></thead><tbody>
+      ${newDevs.slice(0, 50).map((d) => `<tr><td>${esc(whenText(new Date(tsOf(d.first_seen)).toISOString()))}</td><td>${esc(d.name || "") || `<span class="help">(no name)</span>`}</td><td>${esc(d.vendor || "")}</td><td>${esc(d.ip || "")}</td></tr>`).join("")}
+      </tbody></table></div>` : `<p class="help">No new devices in the last ${range}.</p>`}`;
 }

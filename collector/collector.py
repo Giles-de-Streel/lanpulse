@@ -595,6 +595,11 @@ def build_snapshot():
             counts[s] = counts.get(s, 0) + 1
     snap["summary"] = {"total": sum(counts.values()), **{s: counts.get(s, 0) for s in
                        ("up", "down", "warn", "note", "pending", "maintenance", "unknown")}}
+    try:
+        from history import history as build_history
+        snap["extras"]["history"] = build_history(snap, log)
+    except Exception as e:
+        log(f"history failed: {e}")
     # keep Network health above the router's equipment list, and lower-priority groups last
     order = {"Network health": 1, "Network equipment": 2}
     snap["groups"].sort(key=lambda g: order.get(g["name"], 0))
@@ -702,7 +707,13 @@ class SettingsAPI(BaseHTTPRequestHandler):
     def _info(self):
         gw = gateway_ip() or "192.168.1.1"
         types = [{"id": k, **{**v, "url": v["url"].format(gw=gw)}} for k, v in ROUTER_INFO.items()]
-        return {"router": router_status(), "router_types": types, "gateway": gw}
+        try:
+            from history import ntfy_targets
+            alerts = ntfy_targets()
+        except Exception as e:
+            log(f"ntfy lookup failed: {e}")
+            alerts = []
+        return {"router": router_status(), "router_types": types, "gateway": gw, "alerts": alerts}
 
     def _body(self):
         try:
@@ -764,6 +775,28 @@ class SettingsAPI(BaseHTTPRequestHandler):
             save_settings(s)
             SESSIONS.clear()
             return self._send(200, {"ok": True}, cookie=self._new_session())
+        if path == "/api/alerts/test":                       # send a test push to each ntfy topic (signed in)
+            if not self._signed_in():
+                return self._send(401, {"error": "Sign in as administrator first"})
+            if time.time() - _last_test["t"] < 10:
+                return self._send(429, {"error": "One moment: wait a few seconds between tests"})
+            _last_test["t"] = time.time()
+            from history import ntfy_targets
+            sent, skipped = [], []
+            for t in ntfy_targets():
+                if not t["active"] or t["login"]:
+                    skipped.append(t["topic"])
+                    continue
+                try:
+                    http(f"{t['server']}/{urllib.parse.quote(t['topic'])}", method="POST",
+                         data="Test alert from the network monitor. If you see this, phone alerts work.".encode(),
+                         headers={"Title": "lanpulse test", "Tags": "white_check_mark"})
+                    sent.append(t["topic"])
+                except Exception as e:
+                    return self._send(502, {"error": f"Couldn't send: {str(e)[:120]}"})
+            if not sent:
+                return self._send(400, {"error": "No phone-alert topic to test" + (" (it needs a login: send a test from Uptime Kuma)" if skipped else "")})
+            return self._send(200, {"ok": True, "sent": len(sent)})
         if path != "/api/router":
             return self._send(404, {"error": "not found"})
         if not self._signed_in():

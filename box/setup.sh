@@ -26,7 +26,7 @@ chmod 700 "$APP"/config
 install -m 644 "$BOX/docker-compose.yml" "$BOX/Caddyfile" "$APP/"
 install -m 755 "$BOX"/scripts/*.sh "$APP/scripts/"
 rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/"
-install -m 644 "$REPO"/collector/collector.py "$REPO"/collector/netcheck.py "$APP/collector/"
+install -m 644 "$REPO"/collector/collector.py "$REPO"/collector/netcheck.py "$REPO"/collector/history.py "$APP/collector/"
 [ -f "$APP/lanpulse.env" ] || install -m 600 "$BOX/lanpulse.env.example" "$APP/lanpulse.env"
 # older installs: turn on the netcheck and router sources (router stays idle until ROUTER_TYPE is set)
 sed -i 's/^LANPULSE_SOURCES=uptime-kuma$/LANPULSE_SOURCES=uptime-kuma,netcheck,router/' "$APP/lanpulse.env"
