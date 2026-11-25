@@ -48,6 +48,19 @@ export const PROVIDERS = {
         }
       };
       walk(s);
+      // history: event times, outage spans and Kuma-style [bucket_start_s, up, down] rows
+      const hs = s.extras?.history;
+      if (hs) {
+        const mv = (v) => (v ? move(v) : v);
+        hs.from = mv(hs.from);
+        for (const e of [...(hs.events || []), ...(hs.changes || [])]) e.t = mv(e.t);
+        const sh = Math.round(shift / 1000);
+        for (const m of hs.monitors || []) {
+          m.outages = (m.outages || []).map(([a, b, d]) => [mv(a), b ? mv(b) : null, d]);
+          m.daily = (m.daily || []).map(([t, u, d]) => [Math.floor((t + sh) / 86400) * 86400, u, d]);
+          m.hourly = (m.hourly || []).map(([t, u, d]) => [Math.floor((t + sh) / 3600) * 3600, u, d]);
+        }
+      }
       // ?scale=200 pads the demo to about that many tiles, to preview how big sites look
       const want = parseInt(new URLSearchParams(location.search).get("scale") || "0", 10);
       if (want > 0) {
