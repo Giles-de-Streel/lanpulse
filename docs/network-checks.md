@@ -14,7 +14,8 @@ lanpulse looks at the network itself as well as individual devices. Nothing here
 | Connection to router / internet | packet loss and jitter | `ping` |
 | Name lookups | DNS failures and slow answers | `dig` |
 | Public IP | the current address and when it changes | api.ipify.org (the only outside call) |
-| Wi-Fi airspace | your access points, bands, channels, congestion, open or impostor networks using your name, new APs | `iw scan` with the box's Wi-Fi adapter |
+| Wi-Fi airspace | each visible network name (bands, channels, security), channel congestion per band (measured airtime when access points report it, otherwise estimated from neighbours, with 2.4 GHz partial overlap), only flags channel problems when neighbours are actually heard, old/open security, look-alike and new access points, 6 GHz when the adapter supports it | `iw scan` with the box's Wi-Fi adapter |
+| Internet speed | latest Speedtest Tracker result vs this site's 14-day normal; warns on two slow tests in a row or failing tests | Speedtest Tracker database (read-only) |
 | Devices | online, new (last 24 h) and unidentified devices | NetAlertX database (read-only) |
 | Internet uplink | cellular signal (band, bars, RSRP, SINR) and gateway restarts, for 5G/LTE home internet gateways that publish it without a login (T-Mobile so far; add probes to `UPLINKS`) | gateway local API |
 
@@ -36,5 +37,6 @@ Set `ROUTER_TYPE`, `ROUTER_URL`, `ROUTER_USER` and `ROUTER_PASS` in `lanpulse.en
 | `asus` | ASUS stock firmware, AiMesh, ZenWiFi | experimental, endpoints follow the open-source asusrouter project |
 | `openwrt` | OpenWrt / LuCI (ubus JSON-RPC); list several AP URLs | |
 | `unifi` | UniFi OS consoles and the classic controller | |
+| `tmobile` | T-Mobile Home Internet gateways (Arcadyan, Sagemcom, Nokia), local /TMI/v1 API, admin password from the T-Mobile app | |
 
 Adding another: write `router_<name>(url, user, pw)` in `collector.py` that returns the normal form documented above `ROUTERS`, and add it to `ROUTERS`. Good candidates: TP-Link Omada, eero (cloud API), MikroTik (REST), Netgear Orbi, pfSense/OPNsense, and SNMP for managed switches (LLDP neighbours, port speed).

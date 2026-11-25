@@ -301,6 +301,37 @@ def router_unifi(url, user, pw):
     return {"vendor": "unifi", "nodes": nodes, "clients": clients}
 
 
+def router_tmobile(url, user, pw):
+    """T-Mobile Home Internet gateways (Arcadyan, Sagemcom, Nokia) via the local /TMI/v1 API.
+    Needs the gateway admin password (the one used in the T-Life / T-Mobile Internet app);
+    ROUTER_USER defaults to admin. Reports each client as wired, 2.4, 5 or 6 GHz with signal."""
+    op, _ = _opener()
+    tok = _req(op, f"{url}/TMI/v1/auth/login", data={"username": user or "admin", "password": pw})
+    token = (tok.get("auth") or {}).get("token") if isinstance(tok, dict) else None
+    if not token:
+        raise RuntimeError("T-Mobile gateway login failed (check ROUTER_PASS)")
+    hdr = {"Authorization": f"Bearer {token}"}
+    tel = _req(op, f"{url}/TMI/v1/network/telemetry?get=clients", headers=hdr)
+    gw = _req(op, f"{url}/TMI/v1/gateway?get=all") or {}
+    dev = gw.get("device", {}) if isinstance(gw, dict) else {}
+    name = f"{dev.get('manufacturer', '')} {dev.get('model', 'T-Mobile gateway')}".strip()
+    clients = []
+    groups = (tel or {}).get("clients", {}) if isinstance(tel, dict) else {}
+    for key, members in groups.items():
+        k = key.lower()
+        wired = "eth" in k or "lan" in k
+        band = None if wired else "2.4" if k.startswith("2") else "6" if k.startswith("6") else "5" if k.startswith("5") else None
+        for c in members or []:
+            clients.append({"mac": (c.get("mac") or "").upper(), "ip": c.get("ipv4"), "name": c.get("name"),
+                            "online": c.get("connected", True),
+                            "link": {"type": "wired" if wired else "wifi", "band": band, "node": name,
+                                     "rssi": _num(c.get("signal"))}})
+    node = {"name": name, "mac": (dev.get("macId") or "").upper() or None, "ip": urllib.parse.urlparse(url).hostname,
+            "model": dev.get("model"), "role": "router", "online": True, "firmware": dev.get("softwareVersion"),
+            "backhaul": None, "clients": len(clients)}
+    return {"vendor": "tmobile", "nodes": [node], "clients": clients}
+
+
 def _num(v):
     try:
         return float(v) if v not in (None, "") else None
@@ -308,7 +339,7 @@ def _num(v):
         return None
 
 
-ROUTERS = {"asus": router_asus, "openwrt": router_openwrt, "unifi": router_unifi}
+ROUTERS = {"asus": router_asus, "openwrt": router_openwrt, "unifi": router_unifi, "tmobile": router_tmobile}
 _router_cache = {"t": 0, "data": None}
 
 

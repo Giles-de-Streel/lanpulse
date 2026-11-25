@@ -98,3 +98,8 @@ th { color: var(--muted); font-weight: 600; }
 .facts { padding-left: 1.1rem; margin: .3rem 0; }
 .chip { display: inline-block; padding: .1rem .55rem; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); font-size: .85rem; }
 .chip.warn { background: var(--pending-bg); border-color: var(--pending); }
+.speedchart { width: 100%; height: 120px; display: block; margin: .4rem 0; }
+.speedchart rect { fill: #0f766e; opacity: .85; }
+.speedchart rect:hover { opacity: 1; }
+.speedchart .median { stroke: var(--pending); stroke-width: 2; stroke-dasharray: 6 4; }
+.facts li.weak { font-weight: 600; }

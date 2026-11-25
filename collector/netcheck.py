@@ -368,13 +368,101 @@ def scan_wifi(dev):
         util = re.search(r"channel utilisation: (\d+)/255", block)
         sta = re.search(r"station count: (\d+)", block)
         cap = re.search(r"capability: (.*)", block)
+        rsn = re.search(r"\n\s*RSN:(.*?)(?=\n\s*[A-Z][\w /-]*:|\Z)", block, re.S)
+        auth = re.search(r"Authentication suites: (.*)", rsn.group(1)) if rsn else None
+        a = auth.group(1) if auth else ""
+        if "SAE" in a:
+            security = "WPA3/WPA2" if "PSK" in a else "WPA3"
+        elif "OWE" in a:
+            security = "Enhanced Open"
+        elif "IEEE 802.1X" in a:
+            security = "WPA2-Enterprise"
+        elif rsn:
+            security = "WPA2"
+        elif re.search(r"\n\s*WPA:", block):
+            security = "WPA (old)"
+        elif cap and "Privacy" in cap.group(1):
+            security = "WEP (old)"
+        else:
+            security = "Open"
+        width = re.search(r"\* channel width: \d+ \((\d+) MHz\)", block) or re.search(r"STA channel width: (\d+)", block)
         nets.append({"bssid": m.group(1), "ssid": (ssid.group(1).strip() if ssid else "") or None,
                      "band": band, "channel": chan, "signal_dbm": float(sig.group(1)) if sig else None,
-                     "secure": bool(cap and "Privacy" in cap.group(1)),
+                     "secure": bool(cap and "Privacy" in cap.group(1)), "security": security,
+                     "width_mhz": int(width.group(1)) if width else None,
                      "utilisation_pct": round(int(util.group(1)) * 100 / 255) if util else None,
                      "stations": int(sta.group(1)) if sta else None,
                      "associated": "-- associated" in block.split("\n", 1)[0]})
     return nets, None
+
+
+def radio_bands(dev):
+    """Bands this box's Wi-Fi adapter can hear ('2.4', '5', '6'), from iw's frequency list."""
+    _, out = run(["iw", "phy"], timeout=10)
+    bands = set()
+    for f, flags in re.findall(r"\*\s+(\d+)(?:\.\d+)? MHz \[\d+\](.*)", out):
+        if "disabled" in flags:
+            continue
+        b, _ = freq_info(f)
+        bands.add(b)
+    return sorted(bands, key=float)
+
+
+def congestion(nets, own_bssids):
+    """Per band and channel: how many networks, how strong, and how busy the airtime is.
+    Busy-ness comes from access points that report channel utilisation (QBSS load); otherwise it is
+    estimated from the number of audible networks on (and, for 2.4 GHz, overlapping) the channel."""
+    chans = {}
+    for n in nets:
+        key = (n["band"], n["channel"])
+        c = chans.setdefault(key, {"band": n["band"], "channel": n["channel"], "networks": 0, "yours": 0,
+                                   "strongest_dbm": None, "utilisation_pct": None, "overlapping": 0})
+        c["networks"] += 1
+        c["yours"] += n["bssid"] in own_bssids
+        if n["signal_dbm"] is not None and (c["strongest_dbm"] is None or n["signal_dbm"] > c["strongest_dbm"]):
+            c["strongest_dbm"] = n["signal_dbm"]
+        if n["utilisation_pct"] is not None:
+            c["utilisation_pct"] = max(c["utilisation_pct"] or 0, n["utilisation_pct"])
+    for c in chans.values():
+        if c["band"] == "2.4":
+            c["overlapping"] = sum(1 for n in nets if n["band"] == "2.4" and 0 < abs(n["channel"] - c["channel"]) <= 4
+                                   and (n["signal_dbm"] or -100) >= -80)
+        audible = sum(1 for n in nets if n["band"] == c["band"] and n["channel"] == c["channel"]
+                      and (n["signal_dbm"] or -100) >= -80)
+        load = audible + 1.5 * c["overlapping"]
+        u = c["utilisation_pct"]
+        if u is not None:
+            level = "heavy" if u > 70 else "moderate" if u > 40 else "light" if u > 15 else "clear"
+        else:
+            level = "heavy" if load >= 8 else "moderate" if load >= 5 else "light" if load >= 2.5 else "clear"
+        c["congestion"] = level
+        c["basis"] = "measured airtime" if u is not None else "estimated from neighbours"
+    order = {"2.4": 0, "5": 1, "6": 2}
+    return sorted(chans.values(), key=lambda c: (order.get(c["band"], 9), c["channel"]))
+
+
+def ssid_summary(nets):
+    """One row per visible network name, with its access points, bands, channels and security."""
+    by = {}
+    for n in nets:
+        if not n["ssid"]:
+            continue
+        s = by.setdefault(n["ssid"], {"ssid": n["ssid"], "own": n["own"], "access_points": 0, "bands": set(),
+                                      "channels": set(), "strongest_dbm": None, "security": set()})
+        s["access_points"] += 1
+        s["bands"].add(n["band"])
+        s["channels"].add(f"{n['band']}/{n['channel']}")
+        s["security"].add(n.get("security") or "?")
+        if n["signal_dbm"] is not None and (s["strongest_dbm"] is None or n["signal_dbm"] > s["strongest_dbm"]):
+            s["strongest_dbm"] = n["signal_dbm"]
+    out = []
+    for s in by.values():
+        s["bands"] = sorted(s["bands"], key=float)
+        s["channels"] = sorted(s["channels"], key=lambda x: (float(x.split("/")[0]), int(x.split("/")[1])))
+        s["security"] = sorted(s["security"])
+        out.append(s)
+    out.sort(key=lambda s: (not s["own"], -(s["strongest_dbm"] or -100)))
+    return out, sum(1 for n in nets if not n["ssid"])
 
 
 def check_airspace(state):
@@ -406,13 +494,67 @@ def check_airspace(state):
     open_own = [n for n in mine if not n["secure"]]
     if open_own:
         problems.append("open (no password) network using your name: " + ", ".join(n["bssid"] for n in open_own))
-    bad_24 = sorted({n["channel"] for n in mine if n["band"] == "2.4" and n["channel"] not in (1, 6, 11)})
-    if bad_24:
-        problems.append(f"2.4 GHz on channel {', '.join(map(str, bad_24))}: only 1, 6 or 11 avoid overlapping neighbours")
-    busy = [n for n in mine if (n["utilisation_pct"] or 0) > 60]
-    if busy:
-        problems.append("busy channel(s): " + ", ".join(f"{n['band']} GHz ch {n['channel']} {n['utilisation_pct']}%" for n in busy))
+    # Hidden networks broadcast by your own units (guest, mesh backhaul, setup) share the tail
+    # of their radio address with one of your access points: treat them as yours, not neighbours.
+    tails = {n["bssid"][-5:] for n in mine}
+    for n in nets:
+        if not n["own"] and not n["ssid"] and n["bssid"][-5:] in tails:
+            n["own"], n["own_hidden"] = True, True
     neighbours = [n for n in nets if not n["own"]]
+    audible = [n for n in neighbours if (n["signal_dbm"] or -100) >= int(env("NETCHECK_NEIGHBOUR_DBM", "-80"))]
+    notes = []
+
+    # 2.4 GHz: channels are ~4 wide, so a neighbour 1-4 channels away overlaps partially. That is
+    # worse than sharing the same channel (Wi-Fi takes turns on one channel, but partial overlap is
+    # just noise). Only flag it when such neighbours are actually heard.
+    def pressure(ch):
+        """Interference a 2.4 GHz channel would get from audible neighbours (higher = worse)."""
+        total = 0.0
+        for n in audible:
+            if n["band"] != "2.4":
+                continue
+            gap = abs(n["channel"] - ch)
+            if gap <= 4:
+                weight = 1.0 if gap == 0 else 1.5      # partial overlap counts extra
+                total += weight * (10 ** (((n["signal_dbm"] or -90) + 90) / 20))
+        return total
+    for n in [m for m in mine if m["band"] == "2.4" and not m.get("own_hidden")]:
+        overl = [a for a in audible if a["band"] == "2.4" and 0 < abs(a["channel"] - n["channel"]) <= 4]
+        best = min((1, 6, 11), key=pressure)
+        if overl:
+            better = f"; channel {best} looks clearest" if best != n["channel"] and pressure(best) < pressure(n["channel"]) else ""
+            problems.append(f"2.4 GHz channel {n['channel']} partly overlaps {len(overl)} neighbouring network(s) "
+                            f"on channel {', '.join(sorted({str(a['channel']) for a in overl}, key=int))}{better}")
+        elif n["channel"] not in (1, 6, 11):
+            notes.append(f"2.4 GHz is on channel {n['channel']}; fine for now (no neighbours close enough to overlap)")
+    # 5 GHz/6 GHz: channels don't overlap partially; strong neighbours on the same channel share airtime.
+    for n in [m for m in mine if m["band"] in ("5", "6") and not m.get("own_hidden")]:
+        same = [a for a in audible if a["band"] == n["band"] and a["channel"] == n["channel"] and (a["signal_dbm"] or -100) >= -67]
+        if len(same) >= 2:
+            problems.append(f"{n['band']} GHz channel {n['channel']} is shared with {len(same)} strong neighbouring networks")
+    # congestion on the channels your network uses
+    chans = congestion(nets, {n["bssid"] for n in mine})
+    for c in chans:
+        if c["yours"] and c["congestion"] in ("moderate", "heavy"):
+            msg = f"{c['band']} GHz channel {c['channel']} is {'heavily' if c['congestion'] == 'heavy' else 'moderately'} congested"
+            msg += (f" ({c['utilisation_pct']}% of airtime in use)" if c["utilisation_pct"] is not None
+                    else f" ({c['networks']} networks on it, {c['overlapping']} overlapping)")
+            if c["congestion"] == "heavy" or c["utilisation_pct"] is not None:
+                problems.append(msg)
+            else:
+                notes.append(msg)
+    # old or missing security on your own network
+    weak_sec = sorted({n["security"] for n in mine if n.get("security") in ("Open", "WEP (old)", "WPA (old)")})
+    if weak_sec:
+        problems.append(f"your network uses {', '.join(weak_sec)} security: switch to WPA2 or WPA3")
+    # 6 GHz
+    hear = radio_bands(dev)
+    if "6" not in hear:
+        notes.append("this box's Wi-Fi adapter can't hear 6 GHz, so 6 GHz networks won't appear")
+    weak_here = [n for n in mine if not n.get("own_hidden") and (n["signal_dbm"] or 0) < -75]
+    if weak_here and wifi_iface() and len(weak_here) == len([m for m in mine if not m.get("own_hidden")]):
+        notes.append("your Wi-Fi is weak where this box sits")
+    mine = [n for n in mine if not n.get("own_hidden")]
     bands = sorted({n["band"] for n in mine})
     if not own:
         summ = f"{len(nets)} access points heard. Set NETCHECK_OWN_SSIDS to analyse your own network"
@@ -421,10 +563,72 @@ def check_airspace(state):
         summ, st = f"None of your networks ({', '.join(own)}) are visible from this box", "warn"
     else:
         summ = (f"{len(mine)} of your access points ({'/'.join(bands)} GHz), {len(neighbours)} neighbouring"
-                + (". " + "; ".join(problems) if problems else ". No problems spotted"))
+                + (". " + "; ".join(problems) if problems else ". No interference spotted")
+                + (". Note: " + "; ".join(notes) if notes else ""))
         st = "warn" if problems else "up"
-    extra = {"interface": dev, "own_ssids": own, "networks": sorted(nets, key=lambda n: (not n["own"], n["band"], -(n["signal_dbm"] or -100)))}
+    ssids, hidden = ssid_summary(nets)
+    extra = {"interface": dev, "adapter_bands": hear, "own_ssids": own, "notes": notes, "problems": problems,
+             "ssids": ssids, "hidden_count": hidden, "channels": chans,
+             "networks": sorted(nets, key=lambda n: (not n["own"], float(n["band"]), -(n["signal_dbm"] or -100)))}
     return result("airspace", "Wi-Fi airspace", st, summ, problems=problems), extra
+
+
+def check_speed():
+    """Internet speed from Speedtest Tracker: latest result vs this site's normal (median of the
+    last 14 days). Flags a big drop or failing tests, so 'normal' adapts to every connection."""
+    db = env("NETCHECK_SPEED_DB", os.path.join(APP, "speedtest-tracker", "database.sqlite"))
+    if not os.path.exists(db):
+        return None, None
+    import sqlite3, statistics
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10)
+        rows = con.execute("SELECT status, ping, download, upload, created_at, data FROM results "
+                           "WHERE created_at >= datetime('now', '-14 days') ORDER BY created_at").fetchall()
+        con.close()
+    except Exception as e:
+        return result("speed", "Internet speed", "unknown", f"Couldn't read Speedtest Tracker: {e}"), None
+    hist = []
+    for status, ping, down, up, created, data in rows:
+        ok = str(status).lower() in ("completed", "success", "1")
+        extra = {}
+        try:
+            d = json.loads(data or "{}")
+            extra = {"jitter_ms": (d.get("ping") or {}).get("jitter"), "loss_pct": d.get("packetLoss"),
+                     "server": (d.get("server") or {}).get("name"), "isp": d.get("isp")}
+        except ValueError:
+            pass
+        # Speedtest Tracker stores bytes per second
+        hist.append({"at": created, "ok": ok, "ping_ms": ping, "down_mbps": round(down * 8 / 1e6, 1) if down else None,
+                     "up_mbps": round(up * 8 / 1e6, 1) if up else None, **extra})
+    if not hist:
+        return result("speed", "Internet speed", "pending",
+                      "No speed tests yet. Speedtest Tracker runs one every few hours"), {"history": []}
+    good = [h for h in hist if h["ok"] and h["down_mbps"]]
+    last = hist[-1]
+    x = {"history": hist[-60:]}
+    if not last["ok"]:
+        fails = 0
+        for h in reversed(hist):
+            if h["ok"]:
+                break
+            fails += 1
+        return result("speed", "Internet speed", "warn" if fails < 3 else "down",
+                      f"The last {fails} speed test(s) failed"), x
+    med_d = statistics.median(h["down_mbps"] for h in good) if good else None
+    med_u = statistics.median(h["up_mbps"] for h in good if h["up_mbps"]) if good else None
+    x.update(median_down_mbps=med_d, median_up_mbps=med_u, tests=len(good))
+    txt = f"{last['down_mbps']:.0f} down / {last['up_mbps'] or 0:.0f} up Mbps, {last['ping_ms'] or 0:.0f} ms"
+    pct = float(env("NETCHECK_SPEED_DROP_PCT", "50"))
+    if len(good) >= 5 and med_d:
+        txt += f" (normal here: {med_d:.0f} / {med_u or 0:.0f})"
+        slow = last["down_mbps"] < med_d * (1 - pct / 100)
+        # one slow test is noise; flag when the last two are both well below normal
+        prev = good[-2] if len(good) >= 2 else None
+        if slow and prev and prev["down_mbps"] < med_d * (1 - pct / 100):
+            return result("speed", "Internet speed", "warn", f"Slower than normal: {txt}"), x
+    else:
+        txt += f" (learning what's normal: {len(good)} of 5 tests)"
+    return result("speed", "Internet speed", "up", txt), x
 
 
 def check_devices(state):
@@ -511,6 +715,11 @@ def main():
         if c:
             checks.insert(0, c)
             extras["uplink"] = x
+    if enabled("speed"):
+        c, x = check_speed()
+        if c:
+            checks.insert(1 if extras.get("uplink") else 0, c)
+            extras["speed"] = x
     if enabled("airspace"):
         c, x = check_airspace(state)
         checks.append(c)
