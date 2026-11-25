@@ -64,3 +64,26 @@ they open in place with a Back button and return by themselves after 5 minutes.
 - **Wi-Fi signal**: every Wi-Fi client ranked weakest first, rated Excellent (≥ −50 dBm), Good (to −67),
   Fair (to −70), Weak (to −80) or Poor, with a per-access-point summary when there is more than one.
   Band and link-speed columns appear only when the router reports them.
+
+## History page
+
+The **History** button under the banner (`?view=history`) shows the last 24 hours, 7 days or 30 days:
+
+- Summary: number of outages, total downtime, longest outage, and the share of all checks that succeeded.
+- Uptime by check, worst first, with a strip of hourly (24 h) or daily squares. Amber squares mean some
+  checks failed but recovered on retry before counting as an outage.
+- What happened: every outage and recovery (with how long it lasted) from Uptime Kuma, plus changes
+  in lanpulse's own network checks. Devices and Wi-Fi signal are left out because they change constantly.
+- Speed tests and devices first seen in that period.
+
+The collector reads Uptime Kuma's summary tables (`stat_daily`, `stat_hourly`) and status-change
+heartbeats every 10 minutes (`HISTORY_EVERY`, seconds) from a temporary copy of `kuma.db` and its WAL,
+and keeps its own change log in `data/history-changes.json` (90 days). Everything goes into the
+snapshot as `extras.history`. Kuma's daily buckets start at midnight UTC.
+
+## Phone alerts (admin view)
+
+The admin view has a **Phone alerts** card with links to the free ntfy app (Google Play, F-Droid,
+App Store), the topic and server to subscribe to (read from Uptime Kuma's ntfy notification), a Copy
+button, and **Send a test alert**. The topic is shown only to a signed-in administrator, because on a
+public ntfy server anyone who knows the topic can read the alerts.
