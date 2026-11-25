@@ -1,12 +1,16 @@
-# Serves the lanpulse dashboard and its live snapshot on port 80 (published as 8080).
+# Serves the lanpulse dashboard (web/) and its live snapshot (data/) on port 80 (published as 8080).
+# The two are separate mounts so re-copying web/ can never hide the live data.
 :80 {
-	root * /srv
 	encode gzip
-	file_server
-	@data path /data/*
-	header @data {
-		Cache-Control "no-store"
+	handle /data/* {
+		root * /srv
+		header Cache-Control "no-store"
 		# lets a dashboard on another origin (e.g. GitHub Pages via an HTTPS tunnel) read it
-		Access-Control-Allow-Origin "*"
+		header Access-Control-Allow-Origin "*"
+		file_server
+	}
+	handle {
+		root * /srv/www
+		file_server
 	}
 }

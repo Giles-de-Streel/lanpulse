@@ -69,5 +69,5 @@ services:
       - "8080:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./web:/srv:ro
+      - ./web:/srv/www:ro
       - ./data:/srv/data:ro

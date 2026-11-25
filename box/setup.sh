@@ -24,7 +24,7 @@ echo "== stack -> $APP"
 mkdir -p "$APP"/scripts "$APP"/data "$APP"/web "$APP"/collector
 install -m 644 "$BOX/docker-compose.yml" "$BOX/Caddyfile" "$APP/"
 install -m 755 "$BOX"/scripts/*.sh "$APP/scripts/"
-rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/" && mkdir -p "$APP/web/data"   # mount point for live data
+rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/"
 install -m 644 "$REPO"/collector/collector.py "$APP/collector/"
 [ -f "$APP/lanpulse.env" ] || install -m 600 "$BOX/lanpulse.env.example" "$APP/lanpulse.env"
 cd "$APP"
@@ -33,6 +33,7 @@ grep -q '^SPEEDTEST_APP_KEY=' .env || echo "SPEEDTEST_APP_KEY=base64:$(openssl r
 sed -i '/^TZ=/d' .env; echo "TZ=$(timedatectl show -p Timezone --value)" >> .env
 docker compose pull -q
 docker compose up -d
+docker compose restart lanpulse-web lanpulse-collector >/dev/null   # pick up new Caddyfile / collector code
 
 echo "== firewall (only matters if ufw is enabled)"
 ufw allow ssh >/dev/null
