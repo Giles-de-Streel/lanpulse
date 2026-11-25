@@ -467,9 +467,53 @@ def source_router():
     for c in data["clients"]:
         k = "wired" if c["link"]["type"] == "wired" else (f"{c['link']['band']} GHz" if c['link'].get('band') else "Wi-Fi (band not reported)")
         bands[k] = bands.get(k, 0) + 1
-    return {"groups": [{"name": "Network equipment", "items": items}] if items else [],
+    groups = [{"name": "Network equipment", "items": items}] if items else []
+    weak_item, weak_list = weak_wifi(data["clients"])
+    if weak_item:
+        groups.append({"name": "Network health", "items": [weak_item]})
+    return {"groups": groups,
             "extras": {"topology": {"vendor": data["vendor"], "nodes": data["nodes"]},
-                       "clients": data["clients"], "client_bands": bands, "router": router_status()}}
+                       "clients": data["clients"], "client_bands": bands, "weak_wifi": weak_list,
+                       "router": router_status()}}
+
+
+def weak_wifi(clients):
+    """Devices whose Wi-Fi signal (as the router hears them) is poor. Signal guide:
+    -50 or better excellent, to -67 good, to -70 fair (video calls OK), to -80 weak, below -80 poor."""
+    poor_at = int(os.environ.get("ROUTER_POOR_RSSI", "-80"))
+    weak_at = int(os.environ.get("ROUTER_WEAK_RSSI", "-70"))
+    wifi = [c for c in clients if c["link"]["type"] == "wifi" and c.get("online", True)
+            and c["link"].get("rssi") is not None]
+    if not wifi:
+        return None, []
+    def label(c):
+        return c.get("name") or c.get("ip") or c.get("mac")
+    poor = sorted([c for c in wifi if c["link"]["rssi"] < poor_at], key=lambda c: c["link"]["rssi"])
+    weak = sorted([c for c in wifi if poor_at <= c["link"]["rssi"] < weak_at], key=lambda c: c["link"]["rssi"])
+    listed = [{"name": label(c), "ip": c.get("ip"), "mac": c.get("mac"), "rssi": c["link"]["rssi"],
+               "band": c["link"].get("band"), "node": c["link"].get("node"),
+               "level": "poor" if c in poor else "weak"} for c in poor + weak]
+    def names(cs, n=6):
+        s = ", ".join(f"{label(c)} ({c['link']['rssi']:.0f} dBm)" for c in cs[:n])
+        return s + (f" and {len(cs) - n} more" if len(cs) > n else "")
+    if poor:
+        summary = f"{len(poor)} of {len(wifi)} Wi-Fi devices have a poor signal: {names(poor)}"
+        if weak:
+            summary += f". {len(weak)} more are weak but usable"
+        status = "warn"
+    elif weak:
+        summary = f"All {len(wifi)} Wi-Fi devices connect; {len(weak)} have a weak signal: {names(weak)}"
+        status = "up"
+    else:
+        summary = f"All {len(wifi)} Wi-Fi devices have a good signal"
+        status = "up"
+    hint = ("Devices far from the router or behind walls drop out and slow down. Try moving the router more "
+            "centrally and up high, away from metal and thick walls; add a mesh point or access point near "
+            "the weak devices; and use a cable for things that never move (TVs, PCs, game consoles). "
+            "Phones and cars that are leaving or just outside can show up here briefly.")
+    item = {"id": "net-weak-wifi", "name": "Wi-Fi signal of devices", "kind": "netcheck", "status": status,
+            "note": summary, "message": summary, "hint": hint if status != "up" else None}
+    return item, listed
 
 
 SOURCES = {"uptime-kuma": source_uptime_kuma, "netcheck": source_netcheck, "router": source_router}
@@ -526,7 +570,12 @@ def build_snapshot():
             snap["sources"].append({"name": name, "ok": True})
             for k, v in (part.get("site") or {}).items():
                 snap["site"].setdefault(k, v)
-            snap["groups"] += part.get("groups", [])
+            for g in part.get("groups", []):           # sources can add to the same group
+                same = next((x for x in snap["groups"] if x["name"] == g["name"]), None)
+                if same:
+                    same["items"] += g["items"]
+                else:
+                    snap["groups"].append(g)
             snap["extras"].update(part.get("extras", {}))
         except Exception as e:
             snap["sources"].append({"name": name, "ok": False, "error": str(e)[:200]})

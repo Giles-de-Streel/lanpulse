@@ -32,6 +32,7 @@ Alternatively set `ROUTER_TYPE`, `ROUTER_URL`, `ROUTER_USER` and `ROUTER_PASS` i
 
 - a **Network equipment** group: each router, mesh node, AP or switch, with its backhaul or uplink (wired, or Wi-Fi band and signal), flagged when the signal is weak;
 - `link` on each dashboard tile whose monitor target matches a router client: `Wired`, or `5 GHz · Hall node · -61 dBm · 433 Mbps`;
+- a **Wi-Fi signal of devices** check in Network health: devices below -80 dBm (poor) are flagged with names and advice, -70 to -80 dBm counts as weak but usable;
 - detail panels listing every client by connection type, weakest signal first.
 
 | `ROUTER_TYPE` | Covers | Status |
