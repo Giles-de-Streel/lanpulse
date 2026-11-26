@@ -4,10 +4,11 @@
   --pending: #d97706; --pending-bg: #cdbf9f; --maint: #2563eb; --unknown: #9aa4b2;
   --radius: 14px; color-scheme: light dark;
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #0f1419; --card: #182028; --text: #e6edf3; --muted: #9aa7b4; --line: #2a3540;
-          --up-bg: #0f2a1a; --down-bg: #33161a; --pending-bg: #33270f; }
-}
+/* dark theme: chosen with the Light/Dark switch, or the device's setting until one is chosen */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark;
+  --bg: #0f1419; --card: #182028; --text: #e6edf3; --muted: #9aa7b4; --line: #2a3540;
+  --up-bg: #0f2a1a; --down-bg: #33161a; --pending-bg: #33270f; }
 * { box-sizing: border-box; }
 body { margin: 0; font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
        background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
@@ -302,12 +303,10 @@ button.small { padding: .15rem .55rem; font-size: .8rem; margin-left: .4rem; }
 .qbtn i { font-size: .9rem; }
 .qbtn:hover { background: #a5b3a7; border-color: #0f766e; }
 body.kiosk .qbtn { font-size: .95rem; padding: .45rem 1rem; }
-@media (prefers-color-scheme: dark) {
-  .qbtn { background: #12302d; border-color: #1f4f4a; }
-  .qbtn b { color: #7fd6cb; }
-  .qbtn span { color: #a9c9c4; }
-  .qbtn:hover { background: #173b37; }
-}
+:root[data-theme="dark"] .qbtn { background: #12302d; border-color: #1f4f4a; }
+:root[data-theme="dark"] .qbtn b { color: #7fd6cb; }
+:root[data-theme="dark"] .qbtn span { color: #a9c9c4; }
+:root[data-theme="dark"] .qbtn:hover { background: #173b37; }
 
 /* clock to the right of the quick links */
 .quick { align-items: center; }
@@ -375,4 +374,11 @@ body.k-mini .sd-row { padding: .2rem 0; font-size: .85rem; }
   .side { margin-right: 0; }
   .side { position: static; max-height: 70vh; }
 }
-@media (prefers-color-scheme: dark) { .sd-more { color: #7fd6cb; } }
+:root[data-theme="dark"] .sd-more { color: #7fd6cb; }
+.sd-list { padding-right: .6rem; }
+/* Light / Dark switch in the header */
+.theme-switch { padding: 0; margin: 0; min-width: 0; display: inline-flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; font-size: .85rem; }
+.theme-switch label { display: inline-flex; align-items: center; gap: .3rem; padding: .25rem .7rem; cursor: pointer; color: var(--muted); }
+.theme-switch input { margin: 0; accent-color: #0f766e; }
+.theme-switch label:has(input:checked) { background: var(--card); color: var(--text); font-weight: 600; }
+body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
