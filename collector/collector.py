@@ -419,10 +419,28 @@ def router_config():
     net = current_network()
     nid = net["id"] if net else None
     old = s.get("router")
-    if nid and old and (old.get("type") in (None, "", "none") or not net.get("subnet") or
-                        all(_in_subnet(u.strip(), net["subnet"]) for u in (old.get("url") or "").split(",") if u.strip())):
-        # older boxes kept one login: it belongs to the network whose subnet its address is in
-        s.setdefault("routers", {})[nid] = s.pop("router")
+    meta = {}
+    try:
+        meta = json.load(open(os.path.join(CONFIG_DIR, "networks.json")))
+    except (OSError, ValueError):
+        pass
+    routers, dirty = s.setdefault("routers", {}), False
+    if old and meta.get("legacy_id"):
+        # older boxes kept one login: it belongs to the previous setup's network (netswitch.py), which
+        # is used only if the evidence says the box is on it, never just because it was there first
+        routers.setdefault(meta["legacy_id"], old)
+        s.pop("router")
+        old, dirty = None, True
+    for src, dst in (meta.get("merged") or {}).items():
+        if src in routers:                       # two networks turned out to be one
+            routers.setdefault(dst, routers[src])
+            del routers[src]
+            dirty = True
+    if "networks" in meta:                       # forgotten networks: drop their logins too
+        for gone in [k for k in routers if k not in meta["networks"]]:
+            del routers[gone]
+            dirty = True
+    if dirty:
         save_settings(s)
     cfg = {"type": "", "url": "", "user": "", "password": "", "source": None, "network": nid,
            "network_name": net and net.get("name")}
@@ -834,6 +852,7 @@ class SettingsAPI(BaseHTTPRequestHandler):
             devs = []
         return {"network": net and {k: v for k, v in net.items() if k != "known"},
                 "hostname": (net or {}).get("hostname") or (current_network_file().get("hostname")),
+                "online": current_network_file().get("online"),
                 "networks": [{**k, "monitors": len(lists.get(k["id"], [])), "rows": lists.get(k["id"], [])} for k in known],
                 "discovered": [{k: d.get(k) for k in ("ip", "name", "vendor", "mac", "online", "this_box")}
                                for d in devs if d.get("ip")][:300],
@@ -924,11 +943,12 @@ class SettingsAPI(BaseHTTPRequestHandler):
                 return self._send(401, {"error": "Sign in as administrator first"})
             kind = str(req.get("type") or "")
             allowed = {"rename": ("network", "name"), "monitors": ("network", "rows"), "forget": ("network",),
-                       "wifi_scan": (), "wifi_join": ("ssid", "password")}
+                       "wifi_scan": (), "wifi_join": ("ssid", "password"), "confirm": ("candidate",),
+                       "reject": ("candidate",), "split": ()}
             if kind not in allowed:
                 return self._send(400, {"error": "unknown request"})
             res = host_request({"type": kind, **{k: req.get(k) for k in allowed[kind]}},
-                               wait=90 if kind in ("monitors", "wifi_join", "forget") else 45)
+                               wait=90 if kind in ("monitors", "wifi_join", "forget", "confirm", "split") else 45)
             if res is None:
                 return self._send(202, {"ok": None, "pending": True,
                                         "error": "Still working on it. Check again in a minute."})

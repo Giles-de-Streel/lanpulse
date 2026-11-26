@@ -3,26 +3,59 @@
 The box is meant to travel: set it up at home, then take it to an office, a church or a friend's house.
 Plug it in (or join Wi-Fi from the admin view) and it adapts by itself. Nothing needs typing at a console.
 
-## What happens when it lands on a network
+## How it decides which network it is on
 
-`collector/netswitch.py` runs whenever NetworkManager reports a connection change, and at the start of
-every network check (every 10 minutes) as a safety net. It:
+The box never assumes it's on a network it knows, including the one it was set up on.
+Whenever the connection changes (and after a restart), `collector/netswitch.py` gathers evidence:
 
-1. **Recognises the network** by its router's MAC address, so two sites that both use 192.168.1.x are
-   still told apart. A cable wins over Wi-Fi when both are connected.
-2. **Points device discovery at it.** NetAlertX's `SCAN_SUBNETS` is rewritten for every subnet the box
-   is on, on the right adapter (big networks are capped to the /22 around the box).
-3. **Switches the device list.** Each network has its own list in Uptime Kuma (monitors tagged
-   `lanpulse-network=<id>`). The other networks' monitors are **paused, not deleted**, so their history
-   is there when the box comes back. A network seen for the first time gets a starter list (router,
-   internet, name lookups), and the admin view asks you to choose the real devices.
-4. **Uses that network's name as the dashboard title.**
-5. **Keeps learned baselines per network:** public IP, Wi-Fi access points, gateway restarts, what
-   "normal" internet speed is, and which devices count as new. A new site starts in "learning" mode
-   instead of raising false alarms.
-6. **Keeps router logins per network.** A login saved at one site is never tried against another
-   site's router.
-7. **Notes the move in History** ("moved to another network").
+| Evidence | Points | Notes |
+|---|---|---|
+| Router's UPnP ID (UDN) | +45 | hardware; survives a router MAC change |
+| Router's MAC address | +40 (−10 if different) | hardware |
+| Connected to one of its Wi-Fi access points (BSSID) | +35 | hardware |
+| 3+ of its access points heard nearby (signal ≥ −75 dBm) | +30 (1–2: +10) | hardware; works even on a cable |
+| Several of its devices answer (arp-scan) | +35 for 5+, or 3+ that are 30% of its list (2: +12) | randomised phone MACs ignored; one travelling phone isn't evidence |
+| Same Wi-Fi name | +20 (−25 if different) | |
+| Same address range and router address | +10 (−15 if different) | |
+| Same DHCP domain | +15 | |
+| Same public IP | +15 | skipped when `NETCHECK_PUBLICIP=0` |
+
+- **Recognised** = 60+ points **and** at least one hardware item. A Wi-Fi name or address range alone
+  never counts ("NETGEAR" on 192.168.1.x is everywhere). A different Wi-Fi name with no matching
+  hardware rules a network out.
+- **Maybe** (30–59): the box treats it as a **new** network (starter list, no router login from the
+  other network) and the admin view asks *"Is this <name>?"*. It keeps looking every 15 minutes and
+  settles the question by itself if the evidence becomes strong.
+- Otherwise it's a **new** network.
+
+Every network keeps a fingerprint of all of this (with first/last seen times) that grows while the box
+is there, so recognition gets surer over time. The admin view shows why the box decided what it did.
+
+On a box set up before this existed, the old settings (monitors, router login, learned Wi-Fi access
+points, NetAlertX's device list including the router's MAC) become a known network called
+"Previous setup" (or the status page title). It's used only if the evidence matches, like any other.
+
+## What changes with the network
+
+1. **Device discovery** (NetAlertX `SCAN_SUBNETS`) points at every subnet the box is on now (big networks capped to a /22).
+2. **Device list:** each network has its own list in Uptime Kuma (monitors tagged
+   `lanpulse-network=<id>`). Other networks' monitors are **paused, not deleted**, so their history is kept.
+   A new network gets a starter list (router, internet, name lookups).
+3. **Dashboard title** = the network's name.
+4. **Baselines** (public IP, Wi-Fi access points, normal speed, which devices are new) are per network.
+5. **Router logins** are per network.
+6. **History** notes the move.
+
+## Correcting it
+
+In the admin view's "This network" card:
+- **Yes / No** on *"Is this <name>?"*. Yes merges the two (devices, router login, history come back);
+  No remembers that they are different.
+- **Not this network?** on a recognised network: splits it off as a new network and takes back
+  what was learned during this visit.
+- **Forget this network and start over:** deletes its device list and fingerprint. The next look (connection
+  change, restart, or within 10 minutes) treats the network as never seen. Uptime Kuma's database is
+  backed up before every change (`uptime-kuma/kuma.db.bak-*`, newest 10 kept).
 
 ## Finding the box
 
@@ -68,8 +101,7 @@ the network the box is on when you add them.
 
 ## Limits
 
-- A router replaced at a site looks like a new network. Copy the old list across with "Copy the list
-  from another network", then forget the old entry.
+- A replaced router is usually still recognised from the access points, devices and Wi-Fi name. If not, answer "Yes" to the question, or copy the old list across.
 - Pausing a monitor by hand in Uptime Kuma is undone when the box leaves the network and comes back.
 - Speed tests from Speedtest Tracker are shared, but "normal" is worked out only from tests run while
   the box was on the current network.
