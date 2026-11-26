@@ -377,7 +377,7 @@ body.k-mini .sd-row { padding: .2rem 0; font-size: .85rem; }
 :root[data-theme="dark"] .sd-more { color: #7fd6cb; }
 /* device list scrollbar on the left, dark blue, so it is not mistaken for the page scrollbar */
 .sd-list { direction: rtl; padding: 0 0 0 .7rem; scrollbar-color: #1e3a8a transparent; scrollbar-width: thin; }
-.sd-list > * { direction: ltr; }
+.sd-list > * { direction: ltr; text-align: left; }
 .sd-list::-webkit-scrollbar { width: 8px; }
 .sd-list::-webkit-scrollbar-thumb { background: #1e3a8a; border-radius: 4px; }
 .sd-list::-webkit-scrollbar-track { background: transparent; }
