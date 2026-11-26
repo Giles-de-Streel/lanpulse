@@ -419,3 +419,7 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 .guess { font-style: italic; }
 #box-ips { margin: .15rem 0 0; color: var(--muted); font-size: .85rem; }
 #box-ips b { color: var(--text); font-weight: 600; }
+.sd-sort { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin: 0 0 .45rem; font-size: .8rem; color: var(--muted); }
+.sd-sort button { font: inherit; padding: .12rem .55rem; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text); cursor: pointer; }
+.sd-sort button:hover { background: var(--line); }
+.sd-sort button[aria-pressed="true"] { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }

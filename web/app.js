@@ -361,7 +361,13 @@ function renderBoxIps(box) {
 
 // Devices column (right of the tiles): only devices online now, new ones first, then by address.
 // Offline devices stay on the full devices page.
+// sort order for the devices column: auto (new first, then busiest or by IP), name, ip, mac; remembered
+let sideSort = (() => { try { return localStorage.getItem("lp-side-sort") || "auto"; } catch { return "auto"; } })();
+let sideX = null;
+const sortTier = (d) => (d.name ? 0 : d.hint ? 1 : 2);          // named, then guessed, then unknown
+const sortName = (d) => d.name || d.hint || d.vendor || "";
 function renderSide(x) {
+  sideX = x;
   const side = $("#side");
   const all = (x.devices || x.clients) ? mergedDevices(x) : [];
   document.body.classList.toggle("has-side", all.length > 0);
@@ -370,12 +376,23 @@ function renderSide(x) {
   const ip = (s) => (s || "").split(".").reduce((a, n) => a * 256 + (+n || 0), 0);
   const live = all.filter((d) => d.online);
   const byUsage = live.some((d) => d.usage);     // the router reports traffic (UniFi, ASUS): busiest first
-  live.sort((a, b) => ((b.new ? 1 : 0) - (a.new ? 1 : 0))
-    || (byUsage ? (usageVal(b) ?? -1) - (usageVal(a) ?? -1) : 0) || (ip(a.ip) - ip(b.ip)));
+  const mode = sideSort === "busy" && !byUsage ? "auto" : sideSort;
+  const cmp = {
+    name: (a, b) => sortTier(a) - sortTier(b) || sortName(a).localeCompare(sortName(b), undefined, { numeric: true, sensitivity: "base" }) || (ip(a.ip) - ip(b.ip)),
+    ip: (a, b) => ip(a.ip) - ip(b.ip),
+    mac: (a, b) => (a.mac || "").toUpperCase().localeCompare((b.mac || "").toUpperCase()),
+    busy: (a, b) => (usageVal(b) ?? -1) - (usageVal(a) ?? -1) || (ip(a.ip) - ip(b.ip)),
+    auto: (a, b) => ((b.new ? 1 : 0) - (a.new ? 1 : 0))
+      || (byUsage ? (usageVal(b) ?? -1) - (usageVal(a) ?? -1) : 0) || (ip(a.ip) - ip(b.ip)),
+  }[mode] || ((a, b) => ip(a.ip) - ip(b.ip));
+  live.sort(cmp);
+  const sorts = [["auto", byUsage ? "New · busiest" : "New first"], ["name", "Name"], ["ip", "IP"], ["mac", "MAC"]];
+  const sortBar = KIOSK ? "" : `<div class="sd-sort" role="group" aria-label="Sort devices">Sort: ${sorts.map(([k, l]) =>
+    `<button type="button" data-sort="${k}" aria-pressed="${mode === k}">${l}</button>`).join("")}</div>`;
   const top = maxUsage(live);
   const nw = live.filter((d) => d.new).length;
   const href = viewHref("devices"), tgt = KIOSK ? "" : ` target="_blank" rel="noopener"`;
-  side.innerHTML = `<h2><a href="${href}"${tgt}>Devices</a><span class="help">${live.length} online now${nw ? ` · ${nw} new` : ""}${byUsage ? " · busiest first" : ""}</span></h2>
+  side.innerHTML = `<h2><a href="${href}"${tgt}>Devices</a><span class="help">${live.length} online now${nw ? ` · ${nw} new` : ""}${byUsage && mode === "auto" ? " · busiest first" : ""}</span></h2>${sortBar}
     <ul class="sd-list">${live.length ? "" : `<li class="help">No devices online right now</li>`}${live.map((d) => `<li class="sd-row${d.online ? "" : " off"}" title="${esc(clueText(d))}">
       <span class="sdot ${d.online ? "up" : ""}"></span>
       <span class="sd-name">${devLabel(d)}${d.new ? ` <span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</span>
@@ -383,6 +400,14 @@ function renderSide(x) {
     <a class="sd-more" href="${href}"${tgt}>All devices, including offline ↗</a>`;
   return true;
 }
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("#side [data-sort]");
+  if (!b || !sideX) return;
+  sideSort = b.dataset.sort;
+  try { localStorage.setItem("lp-side-sort", sideSort); } catch {}
+  renderSide(sideX);                       // the list is rebuilt, so the new order starts at the top
+});
 
 // wall screen: the devices column fills the height left on screen and shows as many rows as fit
 function sizeSide() {
