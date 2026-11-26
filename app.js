@@ -999,8 +999,10 @@ function viewHistory(x) {
     ...(h.events || []).filter((e) => !e.first && (e.s === "down" || (e.s === "up" && e.dur_s != null) || e.s === "maintenance"))
       .map((e) => ({ t: e.t, s: e.s, name: e.name,
         text: e.s === "down" ? `stopped responding${e.msg ? `: ${e.msg}` : ""}` : e.s === "up" ? `back up after ${fmtDur(e.dur_s)}` : "maintenance started" })),
-    ...(h.changes || []).map((c) => ({ t: c.t, s: c.s === "up" ? "up" : c.s === "down" ? "down" : "warn", name: c.name,
-        text: `${label[c.from] || c.from} → ${label[c.s] || c.s}${c.msg ? `: ${c.msg}` : ""}` })),
+    ...(h.changes || []).map((c) => c.kind === "boot"
+      ? { t: c.t, s: "restart", name: c.name, text: `restarted: ${c.msg}. Nothing was checked during that time.` }
+      : { t: c.t, s: c.s === "up" ? "up" : c.s === "down" ? "down" : "warn", name: c.name,
+        text: `${label[c.from] || c.from} → ${label[c.s] || c.s}${c.msg ? `: ${c.msg}` : ""}` }),
   ].filter((e) => Date.parse(e.t) >= from && (!q || e.name.toLowerCase().includes(q))).sort((a, b) => b.t.localeCompare(a.t));
 
   // speed tests and newly seen devices in the range
