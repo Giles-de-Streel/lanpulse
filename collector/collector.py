@@ -640,7 +640,59 @@ from http.cookies import SimpleCookie
 
 WAKE = threading.Event()
 _last_test = {"t": 0.0}
-SESSIONS = {}                                   # token -> expiry (epoch); in memory, cleared on restart
+class _Sessions:
+    """Admin sign-in sessions, kept in /config/sessions.json (mode 600) so restarting the collector
+    (updates, reboots) doesn't sign everyone out. Only a SHA-256 of each token is stored."""
+    def __init__(self):
+        self.path = os.path.join(os.environ.get("LANPULSE_CONFIG_DIR", "/config"), "sessions.json")
+        self.lock = threading.Lock()
+        try:
+            self.d = {k: float(v) for k, v in json.load(open(self.path)).items()}
+        except (OSError, ValueError, AttributeError):
+            self.d = {}
+
+    @staticmethod
+    def _h(t):
+        return hashlib.sha256(t.encode()).hexdigest()
+
+    def _save(self):
+        try:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+            tmp = self.path + ".tmp"
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as f:
+                json.dump(self.d, f)
+            os.replace(tmp, self.path)
+        except OSError as e:
+            log(f"could not save sessions: {e}")
+
+    def valid(self, t):
+        with self.lock:
+            now = time.time()
+            old = [k for k, exp in self.d.items() if exp < now]
+            for k in old:
+                del self.d[k]
+            if old:
+                self._save()
+            return bool(t) and self._h(t) in self.d
+
+    def add(self, t, seconds):
+        with self.lock:
+            self.d[self._h(t)] = time.time() + seconds
+            self._save()
+
+    def remove(self, t):
+        with self.lock:
+            if t and self.d.pop(self._h(t), None) is not None:
+                self._save()
+
+    def clear(self):
+        with self.lock:
+            self.d = {}
+            self._save()
+
+
+SESSIONS = _Sessions()
 SESSION_HOURS = 12
 _login_fail = {"n": 0, "t": 0.0}
 
@@ -691,14 +743,11 @@ class SettingsAPI(BaseHTTPRequestHandler):
 
     def _signed_in(self):
         t = self._token()
-        now = time.time()
-        for k in [k for k, exp in SESSIONS.items() if exp < now]:
-            SESSIONS.pop(k, None)
-        return bool(t and t in SESSIONS)
+        return SESSIONS.valid(t)
 
     def _new_session(self):
         t = secrets.token_urlsafe(32)
-        SESSIONS[t] = time.time() + SESSION_HOURS * 3600
+        SESSIONS.add(t, SESSION_HOURS * 3600)
         return f"lp_session={t}; Path=/api; HttpOnly; SameSite=Strict; Max-Age={SESSION_HOURS * 3600}"
 
     def _session_info(self):
@@ -758,7 +807,7 @@ class SettingsAPI(BaseHTTPRequestHandler):
             time.sleep(1)
             return self._send(403, {"error": "That password isn't right"})
         if path == "/api/logout":
-            SESSIONS.pop(self._token(), None)
+            SESSIONS.remove(self._token())
             return self._send(200, {"ok": True, "signed_in": False},
                               cookie="lp_session=; Path=/api; HttpOnly; SameSite=Strict; Max-Age=0")
         if path == "/api/admin/password":                    # change the admin password (signed in)
