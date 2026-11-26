@@ -42,9 +42,12 @@ points, NetAlertX's device list including the router's MAC) become a known netwo
    `lanpulse-network=<id>`). Other networks' monitors are **paused, not deleted**, so their history is kept.
    A new network gets a starter list (router, internet, name lookups).
 3. **Dashboard title** = the network's name.
-4. **Baselines** (public IP, Wi-Fi access points, normal speed, which devices are new) are per network.
-5. **Router logins** are per network.
-6. **History** notes the move.
+4. **Speed test straight away:** on arriving at a network (new or returning) the box runs a speed test
+   instead of waiting up to 4 hours for the schedule, unless one already ran during this visit. A test uses
+   about 1 GB: set `NETCHECK_SPEED_ON_ARRIVAL=0` in `/opt/monitor/lanpulse.env` on metered connections.
+5. **Baselines** (public IP, Wi-Fi access points, normal speed, which devices are new) are per network.
+6. **Router logins** are per network.
+7. **History** notes the move.
 
 ## Correcting it
 

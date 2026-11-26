@@ -889,12 +889,14 @@ def _ensure(verbose):
                                                    f"{', '.join(best['reasons'])})" if best and best['level'] == 'maybe' else ""))
     n["evaluated"] = now
     learn(n, o, now)
-    _enter(nets, nid, o, now)
+    prev = _enter(nets, nid, o, now)
     nets["signature"] = sig
     save(nets)
     update_netalertx()
     sync_kuma(nets, base)
     publish(nets, True)
+    if prev != nid:
+        speedtest_on_arrival(n)
     if verbose:
         print(json.dumps({"id": nid, "name": n["name"], "match": n.get("match"), "candidate": n.get("candidate")}, indent=1))
     return {"id": nid, **n}
@@ -932,6 +934,40 @@ def sync_kuma(nets, base):
     except Exception as e:
         log(f"Uptime Kuma switch failed (will retry): {e}")
         return False
+
+
+SPEED_DB = os.path.join(APP, "speedtest-tracker", "database.sqlite")
+# Speedtest Tracker has no "run now" command; this is what its "Speedtest" button does.
+SPEED_PHP = ('require "vendor/autoload.php"; $app = require "bootstrap/app.php"; '
+             '$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); '
+             'echo App\\Actions\\Ookla\\RunSpeedtest::run()->id;')
+
+
+def speedtest_on_arrival(n):
+    """Arriving on a network (new or returning): run a speed test straight away instead of waiting up
+    to 4 hours for the schedule, unless one already ran during this visit. A test uses about 1 GB of
+    data; NETCHECK_SPEED_ON_ARRIVAL=0 in lanpulse.env turns this off (metered connections)."""
+    if lp_env("NETCHECK_SPEED_ON_ARRIVAL", "1").lower() in ("0", "false", "no", "off") or not os.path.exists(SPEED_DB):
+        return False
+    since = (n.get("periods") or [[time.time()]])[-1][0]
+    try:
+        con = sqlite3.connect(f"file:{SPEED_DB}?mode=ro", uri=True, timeout=10)
+        busy = con.execute("SELECT count(*) FROM results WHERE created_at >= datetime(?, 'unixepoch') "
+                           "AND lower(status) NOT IN ('failed', 'skipped')", (int(since) - 60,)).fetchone()[0]
+        con.close()
+    except sqlite3.Error as e:
+        log(f"speed test check failed: {e}")
+        return False
+    if busy:
+        return False
+    rc, out = run(["docker", "exec", "-u", "abc", "-w", "/app/www", "speedtest-tracker", "php", "-r", SPEED_PHP], timeout=90)
+    if rc != 0:
+        log(f"couldn't start a speed test: {out.strip()[-200:]}")
+        return False
+    log(f"speed test started for {n.get('name')} (result {out.strip()[-12:]})")
+    # show the result without waiting for the next 10-minute check
+    run(["systemd-run", "--quiet", "--collect", "--on-active=150", "systemctl", "start", "lanpulse-netcheck.service"], timeout=20)
+    return True
 
 
 def merge(nets, src, dst, why=None, auto=False):
