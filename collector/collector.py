@@ -482,18 +482,36 @@ def router_status():
             "error": _router_cache["error"], "checked": _router_cache["t"] or None}
 
 
+def _router_signin():
+    """Not signed in to the router (never set up on this network, no password, or the login fails):
+    a tile saying so, so it's clear why per-device connection and Wi-Fi signal are missing.
+    No tile when an administrator chose "no router" (type none)."""
+    st = router_status()
+    where = "Sign in from the admin view (Router connection) to see how every device connects and its Wi-Fi signal."
+    if st["type"] and st["has_password"]:
+        status, note = "warn", f"Can't sign in to the router: {st['error'] or 'no answer'}. Check the login in the admin view."
+    else:
+        status, note = "note", "Not signed in to the router. " + where
+    item = {"id": "router-signin", "name": "Router sign-in", "kind": "netcheck", "status": status, "priority": "low",
+            "note": note, "message": note}
+    return {"groups": [{"name": "Network health", "items": [item]}], "extras": {"router": st}}
+
+
 def source_router():
     """Connection type / node / signal for every client, and mesh/AP topology with backhaul."""
     cfg = router_config()
     kind = cfg["type"]
-    if not kind or kind == "none":
+    if kind == "none":
         _router_cache.update(data=None, error=None)
         return {"extras": {"router": router_status()}}
+    if not kind or not cfg["password"]:
+        _router_cache.update(data=None, error=None)
+        return _router_signin()
     key = (kind, cfg["url"], cfg["user"], cfg["password"])
     interval = int(os.environ.get("ROUTER_INTERVAL", "300"))
     if key == _router_cache["key"] and time.time() - _router_cache["t"] < interval:
         if _router_cache["error"]:                       # back off after a failed login, don't hammer
-            return {"extras": {"router": router_status()}}
+            return _router_signin()
         data = _router_cache["data"]
     else:
         try:
@@ -502,7 +520,7 @@ def source_router():
         except Exception as e:
             _router_cache.update(t=time.time(), data=None, error=str(e)[:200], key=key)
             log(f"router: {e}")
-            return {"extras": {"router": router_status()}}
+            return _router_signin()
     weak = int(os.environ.get("ROUTER_WEAK_RSSI", "-70"))
     items = []
     for n in data["nodes"]:
