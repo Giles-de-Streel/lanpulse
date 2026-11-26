@@ -10,7 +10,7 @@ Standard library only, so it runs in a stock python:3 image.
 
 Configuration is all environment variables (see box/lanpulse.env.example).
 """
-import json, os, sys, time, urllib.request, urllib.error, urllib.parse, datetime, traceback
+import json, os, re, sys, time, urllib.request, urllib.error, urllib.parse, datetime, traceback
 
 SCHEMA = "lanpulse.snapshot/1"
 INTERVAL = int(os.environ.get("LANPULSE_INTERVAL", "30"))
@@ -813,6 +813,7 @@ def build_snapshot():
         snap["site"]["name"] = SITE_NAME
     if SITE_DESC:
         snap["site"]["description"] = SITE_DESC
+    apply_names(snap)
     attach_links(snap)
     util = utilization_item(snap)
     if util:
@@ -841,6 +842,19 @@ def build_snapshot():
     order = {"Network health": 1, "Network equipment": 2}
     snap["groups"].sort(key=lambda g: order.get(g["name"], 0))
     return snap
+
+
+def apply_names(snap):
+    """Names typed on the dashboard (settings "device_names", by MAC) win over NetAlertX and the router.
+    netcheck.py on the host also writes them into NetAlertX, marked as set by a person."""
+    names = load_settings().get("device_names") or {}
+    if not names:
+        return
+    for key in ("devices", "clients"):
+        for d in (snap["extras"].get(key) or []):
+            n = names.get((d.get("mac") or "").upper())
+            if n:
+                d["name"] = n
 
 
 def attach_links(snap):
@@ -1179,6 +1193,20 @@ class SettingsAPI(BaseHTTPRequestHandler):
             if not sent:
                 return self._send(400, {"error": "No phone-alert topic to test" + (" (it needs a login: send a test from Uptime Kuma)" if skipped else "")})
             return self._send(200, {"ok": True, "sent": len(sent)})
+        if path == "/api/device/name":                       # rename a device (signed in); "" clears it
+            if not self._signed_in():
+                return self._send(401, {"error": "Sign in as administrator first"})
+            mac = str(req.get("mac") or "").strip().upper()
+            name = " ".join(str(req.get("name") or "").split())[:60]
+            if not re.fullmatch(r"([0-9A-F]{2}:){5}[0-9A-F]{2}", mac):
+                return self._send(400, {"error": "That isn't a MAC address"})
+            s = load_settings()
+            names = s.setdefault("device_names", {})
+            names[mac] = name                    # "" is kept so netcheck can clear the name in NetAlertX too
+            save_settings(s)
+            log(f"device {mac} renamed from the dashboard")
+            WAKE.set()
+            return self._send(200, {"ok": True, "mac": mac, "name": name})
         if path == "/api/network":                           # changes the host carries out (signed in)
             if not self._signed_in():
                 return self._send(401, {"error": "Sign in as administrator first"})
@@ -1298,6 +1326,12 @@ def start_api():
 
 def run_once():
     snap = build_snapshot()
+    try:                                           # phone alerts for network checks and new devices
+        import alerts
+        from history import ntfy_targets
+        alerts.check(snap, ntfy_targets(), SITE_NAME or ((snap["extras"].get("network") or {}).get("name") or ""))
+    except Exception as e:
+        log(f"alerts: {e}")
     body = json.dumps(snap, separators=(",", ":")).encode()
     names = ["file"] + [p.strip() for p in os.environ.get("LANPULSE_PUBLISHERS", "").split(",")
                         if p.strip() and p.strip() != "file"]

@@ -146,6 +146,9 @@ user_pref("browser.tabs.warnOnClose", false);
 user_pref("extensions.pocket.enabled", false);
 user_pref("browser.newtabpage.enabled", false);
 user_pref("signon.rememberSignons", false);
+// scrollbars always shown (not the fading overlay kind), so the devices list visibly scrolls
+user_pref("widget.gtk.overlay-scrollbars.enabled", false);
+user_pref("layout.testing.overlay-scrollbars.always-visible", true);
 EOF
 
 cat > "$H/.config/autostart/dashboard.desktop" <<EOF

@@ -656,11 +656,37 @@ def check_speed():
     return result("speed", "Internet speed", "up", txt), x
 
 
+def sync_names(db):
+    """Copy names typed on the dashboard (config/settings.json "device_names") into NetAlertX, marked
+    USER so its scans never overwrite them. An empty name hands the device back to NetAlertX's own naming."""
+    import sqlite3
+    try:
+        names = json.load(open(os.path.join(APP, "config", "settings.json"))).get("device_names") or {}
+    except (OSError, ValueError):
+        return
+    if not names:
+        return
+    try:
+        con = sqlite3.connect(db, timeout=20)
+        for mac, name in names.items():
+            if name:
+                con.execute("UPDATE Devices SET devName=?, devNameSource='USER' WHERE upper(devMac)=? "
+                            "AND (devName IS NOT ? OR COALESCE(devNameSource,'') <> 'USER')", (name, mac.upper(), name))
+            else:
+                con.execute("UPDATE Devices SET devName='(unknown)', devNameSource='' WHERE upper(devMac)=? "
+                            "AND devNameSource='USER'", (mac.upper(),))
+        con.commit()
+        con.close()
+    except Exception as e:
+        print(f"name sync: {e}", file=sys.stderr)
+
+
 def check_devices(state):
     db = os.path.join(APP, "netalertx", "db", "app.db")
     if not os.path.exists(db):
         return result("devices", "Devices on the network", "unknown", "NetAlertX database not found"), None
     import sqlite3
+    sync_names(db)
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10)
         rows = con.execute("SELECT devMac, devName, devLastIP, devVendor, devFirstConnection, devLastConnection, "
