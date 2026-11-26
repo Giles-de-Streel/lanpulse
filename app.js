@@ -210,6 +210,7 @@ function render(snap) {
   document.title = site.name || "lanpulse";
   $("#site-name").textContent = site.name || "Network status";
   $("#site-desc").textContent = site.description || "";
+  renderBoxIps((snap.extras || {}).box);
 
   const sum = snap.summary || {};
   const isNote = (i) => i.status === "warn" && i.priority === "low";
@@ -345,6 +346,17 @@ function devLabel(d) {
   if (d.name) return esc(d.name);
   if (d.hint) return `<span class="guess">Probably ${esc(d.hint)}</span> <span class="help mono">${esc(macTail(d))}</span>`;
   return `${esc(d.vendor && d.vendor !== "Private" ? d.vendor : "Unknown device")} <span class="help mono">${esc(macTail(d))}</span>`;
+}
+
+// Header line: the monitoring box's own name and addresses (main connection first)
+function renderBoxIps(box) {
+  const el = $("#box-ips");
+  const ips = (box && box.ips) || [];
+  el.hidden = !ips.length;
+  if (!ips.length) return;
+  el.innerHTML = `Monitoring box <b>${esc(box.hostname || "")}</b> · ` + ips.map((x) =>
+    `<span class="mono" title="${esc(x.dev)}${x.main ? " · main connection" : " · backup"}">${esc(x.ip)}</span> ` +
+    `<span class="help">(${esc(x.kind)}${ips.length > 1 && !x.main ? ", backup" : ""})</span>`).join(" · ");
 }
 
 // Devices column (right of the tiles): only devices online now, new ones first, then by address.
