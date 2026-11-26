@@ -363,7 +363,9 @@ body.has-side .layout { grid-template-columns: minmax(0, 1fr) minmax(340px, 32re
 .sd-row.off { opacity: .55; }
 .sd-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sd-ip { color: var(--muted); font-size: .82rem; font-variant-numeric: tabular-nums; }
-.sd-link { grid-column: 2 / -1; color: var(--muted); font-size: .78rem; }
+.sd-link { grid-column: 2 / -1; color: var(--muted); font-size: .78rem; display: flex; justify-content: space-between; gap: .6rem; min-width: 0; }
+.sd-link > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sd-mac { flex: none; font-size: .74rem; letter-spacing: .01em; }
 .sd-more { margin-top: .45rem; font-size: .85rem; font-weight: 600; color: #0f766e; text-decoration: none; }
 .sd-more:hover { text-decoration: underline; }
 body.kiosk .side { position: static; max-height: none; overflow: hidden; }

@@ -339,14 +339,13 @@ function usageHtml(u, top) {
   return `<span class="ubar" title="${esc(u.basis || "")}"><i style="width:${v ? w : 0}%"></i></span> <span class="utext">${esc(text)}</span>`;
 }
 
-// Unnamed devices: the box's best guess (identify.py) in italics, plus the end of the MAC address so
-// several alike devices can be told apart. Hover shows the clues.
-const macTail = (d) => (d.mac ? `…${d.mac.slice(-5)}` : "");
+// Unnamed devices: the box's best guess (identify.py) in italics; the full MAC is on the row's
+// second line so alike devices can be told apart. Hover shows the clues.
 const clueText = (d) => [d.vendor, d.mac, ...(d.clues || [])].filter(Boolean).join("\n");
 function devLabel(d) {
   if (d.name) return esc(d.name);
-  if (d.hint) return `<span class="guess">Probably ${esc(d.hint)}</span> <span class="help mono">${esc(macTail(d))}</span>`;
-  return `${esc(d.vendor && d.vendor !== "Private" ? d.vendor : "Unknown device")} <span class="help mono">${esc(macTail(d))}</span>`;
+  if (d.hint) return `<span class="guess">Probably ${esc(d.hint)}</span>`;
+  return esc(d.vendor && d.vendor !== "Private" ? d.vendor : "Unknown device");
 }
 
 // Header line: the monitoring box's own name and addresses (main connection first)
@@ -380,7 +379,7 @@ function renderSide(x) {
     <ul class="sd-list">${live.length ? "" : `<li class="help">No devices online right now</li>`}${live.map((d) => `<li class="sd-row${d.online ? "" : " off"}" title="${esc(clueText(d))}">
       <span class="sdot ${d.online ? "up" : ""}"></span>
       <span class="sd-name">${devLabel(d)}${d.new ? ` <span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</span>
-      <span class="sd-ip">${esc(d.ip || "")}</span>${d.link ? `<span class="sd-link">${linkText(d.link)}</span>` : ""}${byUsage ? `<span class="sd-use">${usageHtml(d.usage, top)}</span>` : ""}</li>`).join("")}</ul>
+      <span class="sd-ip">${esc(d.ip || "")}</span>${d.link || d.mac ? `<span class="sd-link"><span>${d.link ? linkText(d.link) : ""}</span><span class="sd-mac mono">${esc((d.mac || "").toUpperCase())}</span></span>` : ""}${byUsage ? `<span class="sd-use">${usageHtml(d.usage, top)}</span>` : ""}</li>`).join("")}</ul>
     <a class="sd-more" href="${href}"${tgt}>All devices, including offline ↗</a>`;
   return true;
 }
