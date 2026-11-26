@@ -209,6 +209,44 @@ EOF
 systemctl daemon-reload
 systemctl enable --now lanpulse-backup.timer >/dev/null 2>&1
 
+echo "== reboot after updates that need it (04:15, only when required)"
+# the OS installs updates nightly (kiosk-setup.sh) but never restarts; kernel and core-library fixes only
+# take effect after a reboot. Debian/Ubuntu/Mint flag that with /run/reboot-required, Fedora/RHEL via
+# needs-restarting -r, openSUSE via zypper needs-rebooting. The dashboard is back about 2 minutes later.
+cat > /usr/local/sbin/lanpulse-reboot-if-needed <<'EOF'
+#!/bin/sh
+need=""
+[ -f /run/reboot-required ] && need="$(cat /run/reboot-required.pkgs 2>/dev/null | tr '\n' ' ')"
+[ -z "$need" ] && [ -f /run/reboot-required ] && need="updates"
+if [ -z "$need" ] && command -v needs-restarting >/dev/null; then needs-restarting -r >/dev/null 2>&1 || need="updates"; fi
+if [ -z "$need" ] && command -v zypper >/dev/null; then zypper -q needs-rebooting >/dev/null 2>&1; [ $? -eq 102 ] && need="updates"; fi
+if [ -n "$need" ]; then
+  logger -t lanpulse "rebooting to finish installing: $need"
+  systemctl reboot
+fi
+EOF
+chmod 755 /usr/local/sbin/lanpulse-reboot-if-needed
+cat > /etc/systemd/system/lanpulse-reboot-check.service <<'EOF'
+[Unit]
+Description=lanpulse: reboot if installed updates need it
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/lanpulse-reboot-if-needed
+EOF
+cat > /etc/systemd/system/lanpulse-reboot-check.timer <<'EOF'
+[Unit]
+Description=lanpulse: nightly check at 04:15 whether updates need a reboot
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now lanpulse-reboot-check.timer >/dev/null 2>&1
+
 echo "== done"
 docker ps --format '{{.Names}}  {{.Status}}'
 echo

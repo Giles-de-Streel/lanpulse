@@ -68,6 +68,7 @@ Keep your site CSVs somewhere private (your own repo or the box). They describe 
 - disables sleep, suspend and the lid switch. On Debian-style GRUB setups it also makes the boot menu always visible, so an older kernel is one keypress away
 - opens the dashboard ports in ufw or firewalld, if either is running
 - adds a nightly data backup to `/opt/monitor/backups` (keeps 14)
+- installs OS updates nightly (kiosk setup) and reboots at 04:15 only when an update needs it
 
 It is safe to re-run, for example after a `git pull`.
 
