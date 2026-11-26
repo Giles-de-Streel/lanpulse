@@ -1218,7 +1218,7 @@ function mergedDevices(x) {
     const byIp = [...out.values()].find((d) => d.ip && d.ip === c.ip);
     const d = out.get(k) || byIp || {};
     if (byIp && !out.get(k)) out.delete((byIp.mac || byIp.ip || "").toUpperCase());
-    out.set((d.mac || k).toUpperCase(), { ...d, mac: d.mac || c.mac, ip: d.ip || c.ip, name: d.name || c.name,
+    out.set((d.mac || k).toUpperCase(), { ...d, mac: d.mac || c.mac, ip: d.ip || c.ip, name: [d.name, c.name].find((n) => n && n !== (d.vendor || c.vendor)) || null,
       online: d.online ?? c.online, link: c.link, usage: c.usage || d.usage, hint: d.hint, clues: d.clues });
   }
   return [...out.values()];
