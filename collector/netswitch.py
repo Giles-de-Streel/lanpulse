@@ -1158,6 +1158,13 @@ def main():
     if "--requests" in sys.argv:
         process_requests()
         return
+    if "--forget-current" in sys.argv:
+        # same as "Forget this network and start over" in the admin view
+        with open(os.path.join(CONF, ".netswitch.lock"), "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            nid = load().get("current")
+            print(json.dumps(handle({"type": "forget", "network": nid}) if nid else {"ok": False, "error": "no current network"}))
+        return
     ensure(verbose="--print" in sys.argv)
 
 
