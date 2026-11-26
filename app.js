@@ -129,6 +129,7 @@ function renderQuick(items, x) {
       const on = x.devices.filter((d) => d.online).length, nw = x.devices.filter((d) => d.new).length;
       return `${on} online${nw ? ` · ${nw} new` : ""}`;
     }
+    if (i.id === "net-weak-wifi" && i.missing) return "sign in to the router to see";
     if (i.id === "net-weak-wifi" && x.clients) {
       const s = x.clients.filter((c) => c.link?.type === "wifi" && c.link.rssi != null).map((c) => c.link.rssi);
       const poor = s.filter((r) => r < -80).length, weak = s.filter((r) => r >= -80 && r < -70).length;
@@ -139,7 +140,7 @@ function renderQuick(items, x) {
   const names = { "net-devices": "Devices", "net-weak-wifi": "Wi-Fi signal" };
   el.innerHTML = items.map((i) => {
     const sub = label(i);
-    return `<a class="qbtn" href="${viewHref(TILE_VIEWS[i.id][0])}"${KIOSK ? "" : ` target="_blank" rel="noopener"`} title="${esc(i.note || i.message || "")}">
+    return `<a class="qbtn${i.missing ? " needs" : ""}" href="${viewHref(TILE_VIEWS[i.id][0])}"${KIOSK ? "" : ` target="_blank" rel="noopener"`} title="${esc(i.note || i.message || "")}">
       <b>${esc(names[i.id] || i.name)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}<i aria-hidden="true">↗</i></a>`;
   }).join("");
   if (x.history) {
@@ -162,6 +163,9 @@ function render(snap) {
     return true;
   }) })).filter((g) => g.items.length) };
   snap.summary = recount(snap.groups);
+  // the Wi-Fi signal button is always there; without router data its page says how to get it
+  if (!quick.some((i) => i.id === "net-weak-wifi"))
+    quick.push({ id: "net-weak-wifi", name: "Wi-Fi signal of devices", note: "Sign in to the router in the admin view to see each device's signal", missing: true });
   renderQuick(quick, snap.extras || {});
   renderClock(snap.extras || {});
   const site = snap.site || {};
