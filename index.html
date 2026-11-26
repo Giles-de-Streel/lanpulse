@@ -16,6 +16,7 @@
       try { t = q || localStorage.getItem("lp-theme"); } catch (e) { t = q; }
       if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       document.documentElement.dataset.theme = t;
+      if (/[?&]kiosk/.test(location.search)) document.documentElement.classList.add("kiosk");
     })();
     // wall screen watchdog: if the dashboard script never got going (a broken update, a failed load),
     // nothing else would ever reload the page, so try again every 90 s until it does
@@ -76,6 +77,24 @@
   <dialog id="item-dialog" class="wide">
     <div id="item-body"></div>
     <menu><span class="spacer"></span><button type="button" data-close>Close</button></menu>
+  </dialog>
+
+  <dialog id="rename-dialog">
+    <form id="rename-form" method="dialog" autocomplete="off">
+      <h2>Rename device</h2>
+      <p id="rn-info" class="help"></p>
+      <label>Name
+        <input id="rn-name" maxlength="60" spellcheck="false">
+      </label>
+      <p class="help">Shown on this dashboard and saved in the device finder (NetAlertX), so its scans keep it.</p>
+      <p id="rn-result" class="result" hidden></p>
+      <menu>
+        <button type="button" class="ghost" id="rn-clear">Remove name</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" data-close>Cancel</button>
+        <button type="submit" id="rn-save" value="default">Save</button>
+      </menu>
+    </form>
   </dialog>
 
   <dialog id="signin-dialog">

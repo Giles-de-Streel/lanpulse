@@ -429,3 +429,15 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 .dt-sub { color: var(--muted); font-size: .78rem; margin-top: .1rem; white-space: normal; }
 .dt-addr .dt-sub { font-size: .74rem; white-space: nowrap; }
 .dt-seen .dt-sub { white-space: nowrap; }
+/* rename button and "which one is it?" panel */
+.rn-btn { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 0 .2rem; font-size: .9em; opacity: .55; }
+.rn-btn:hover, .rn-btn:focus-visible { opacity: 1; color: var(--text); }
+.sd-row:hover .rn-btn, .view-table tr:hover .rn-btn { opacity: 1; }
+.finder { background: var(--card); border: 1px solid var(--line); border-left: 4px solid #1e3a8a; border-radius: var(--radius); padding: .4rem 1rem; margin: .5rem 0 .8rem; }
+.finder ul { margin: .2rem 0 .4rem; padding-left: 1.2rem; }
+/* wall screen: the page itself never shows a scrollbar (it is fitted to the screen); the devices list
+   keeps a visible one. Firefox on Linux also needs the kiosk profile prefs in kiosk-setup.sh. */
+html.kiosk { scrollbar-width: none; }
+html.kiosk::-webkit-scrollbar { display: none; }
+.sd-list { scrollbar-gutter: stable; }
+html.kiosk .sd-list { scrollbar-width: auto; }

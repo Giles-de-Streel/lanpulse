@@ -188,7 +188,7 @@ function renderQuick(items, x) {
 }
 
 function render(snap) {
-  if (VIEW) { LAST_SNAP = snap; return renderView(snap); }
+  if (VIEW) { LAST_SNAP = snap; renderView(snap); document.documentElement.dataset.booted = "1"; return; }
   LAST_SNAP = snap;
   ITEMS.clear();
   // Devices and Wi-Fi signal change constantly, so they aren't shown as issues: they become quick-link
@@ -207,6 +207,7 @@ function render(snap) {
   renderQuick(quick, snap.extras || {});          // Devices button stays too: a quick link without scrolling
   renderClock(snap.extras || {});
   window.lpBooted = true;          // tells the wall screen watchdog in index.html the page came up
+  document.documentElement.dataset.booted = "1";   // and tools/check.sh
   const site = snap.site || {};
   document.title = site.name || "lanpulse";
   $("#site-name").textContent = site.name || "Network status";
@@ -342,6 +343,10 @@ function usageHtml(u, top) {
 // Unnamed devices: the box's best guess (identify.py) in italics; the full MAC is on the row's
 // second line so alike devices can be told apart. Hover shows the clues.
 const clueText = (d) => [d.vendor, d.mac, ...(d.clues || [])].filter(Boolean).join("\n");
+// rename (on the box, not the wall screen): signed-in administrators; others are asked to sign in first
+const canRename = () => !!SESSION && !KIOSK;
+const renameBtn = (d) => (canRename() && d.mac
+  ? ` <button type="button" class="rn-btn" data-rename="${esc(d.mac.toUpperCase())}" title="Rename this device" aria-label="Rename">✎</button>` : "");
 function devLabel(d) {
   if (d.name) return esc(d.name);
   if (d.hint) return `<span class="guess">Probably ${esc(d.hint)}</span>`;
@@ -395,7 +400,7 @@ function renderSide(x) {
   side.innerHTML = `<h2><a href="${href}"${tgt}>Devices</a><span class="help">${live.length} online now${nw ? ` · ${nw} new` : ""}${byUsage && mode === "auto" ? " · busiest first" : ""}</span></h2>${sortBar}
     <ul class="sd-list">${live.length ? "" : `<li class="help">No devices online right now</li>`}${live.map((d) => `<li class="sd-row${d.online ? "" : " off"}" title="${esc(clueText(d))}">
       <span class="sdot ${d.online ? "up" : ""}"></span>
-      <span class="sd-name">${devLabel(d)}${d.new ? ` <span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</span>
+      <span class="sd-name">${devLabel(d)}${renameBtn(d)}${d.new ? ` <span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</span>
       <span class="sd-ip">${esc(d.ip || "")}</span>${d.link || d.mac ? `<span class="sd-link"><span>${d.link ? linkText(d.link) : ""}</span><span class="sd-mac mono">${esc((d.mac || "").toUpperCase())}</span></span>` : ""}${byUsage ? `<span class="sd-use">${usageHtml(d.usage, top)}</span>` : ""}</li>`).join("")}</ul>
     <a class="sd-more" href="${href}"${tgt}>All devices, including offline ↗</a>`;
   return true;
@@ -419,10 +424,10 @@ function sizeSide() {
   const top = side.getBoundingClientRect().top + scrollY;
   const footH = document.querySelector("footer")?.offsetHeight || 0;
   side.style.height = Math.max(180, innerHeight - top - footH - 16) + "px";
+  // rows that don't fit scroll (the list has an always-visible scrollbar); the link says how many are below
   const lb = list.getBoundingClientRect().bottom;
-  const cut = rows.filter((r) => r.getBoundingClientRect().bottom > lb + 1);
-  cut.forEach((r) => (r.hidden = true));
-  more.textContent = cut.length ? `+${cut.length} more · see all ↗` : "All devices, including offline ↗";
+  const below = rows.filter((r) => r.getBoundingClientRect().bottom > lb + 1).length;
+  more.textContent = below ? `${below} more below: scroll the list, or see all ↗` : "All devices, including offline ↗";
 }
 
 function fitsScreen() {
@@ -1238,7 +1243,7 @@ async function openWifi() {
   scan();
 }
 
-loadBoxSettings();
+loadBoxSettings().then(() => { if (LAST_SNAP && canRename()) render(LAST_SNAP); });   // adds the ✎ buttons
 setInterval(loadBoxSettings, 60_000);
 
 // ---------------------------------------------------------------- detail pages (?view=devices | wifi)
@@ -1340,6 +1345,80 @@ const tsOf = (s) => (s ? Date.parse(String(s).replace(" ", "T") + (/[Z+]/.test(S
 const matches = (d) => !viewState.q || [d.name, d.hint, d.ip, d.mac, d.vendor, d.link?.node, d.link?.band && `${d.link.band} ghz`]
   .some((f) => f && String(f).toLowerCase().includes(viewState.q));
 
+// "Which one is it?": note what's online now, then the person unplugs the mystery device and the
+// page lists whatever has dropped off since. Kept in this browser tab only.
+const finder = () => { try { return JSON.parse(sessionStorage.getItem("lp-find") || "null"); } catch { return null; } };
+function finderPanel(all) {
+  const f = finder();
+  if (!f) return `<p><button type="button" class="ghost" id="find-start">Which one is it?</button>
+    <span class="help">Find out which row is a device you can see: start, then unplug it or switch it off.</span></p>`;
+  const gone = all.filter((d) => !d.online && f.macs.includes((d.mac || "").toUpperCase()));
+  const mins = Math.round((Date.now() - f.t) / 60000);
+  return `<div class="finder">
+    <p><b>Watching for a device to drop off</b> <span class="help">(started ${mins} min ago with ${f.macs.length} online)</span>
+      <button type="button" class="ghost" id="find-stop">Stop</button></p>
+    ${gone.length ? `<p>Gone since then:</p><ul>${gone.map((d) => `<li>${devLabel(d)}${renameBtn(d)}
+      <span class="help mono">${esc(d.ip || "")} · ${esc((d.mac || "").toUpperCase())}</span></li>`).join("")}</ul>
+      <p class="help">${gone.length > 1 ? "More than one went: plug yours back in and see which one comes back." : "That's the one. Plug it back in when you're done."}</p>`
+      : `<p class="help">Unplug the device or take its battery out now. It drops off here within about 5 minutes, as soon as the next scan misses it.</p>`}
+  </div>`;
+}
+document.addEventListener("click", (e) => {
+  if (e.target.id === "find-start") {
+    const macs = mergedDevices(LAST_SNAP?.extras || {}).filter((d) => d.online && d.mac).map((d) => d.mac.toUpperCase());
+    sessionStorage.setItem("lp-find", JSON.stringify({ t: Date.now(), macs }));
+    render(LAST_SNAP);
+  } else if (e.target.id === "find-stop") {
+    sessionStorage.removeItem("lp-find");
+    render(LAST_SNAP);
+  }
+});
+
+let RENAME_MAC = null;
+function openRename(mac) {
+  const d = mergedDevices(LAST_SNAP?.extras || {}).find((x) => (x.mac || "").toUpperCase() === mac) || { mac };
+  RENAME_MAC = mac;
+  $("#rn-info").textContent = [d.ip, mac, d.vendor, d.hint && `probably ${d.hint}`].filter(Boolean).join(" · ");
+  $("#rn-name").value = d.name || "";
+  $("#rn-name").placeholder = d.hint ? `e.g. ${d.hint.replace(/ \(.*\)$/, "")}` : "e.g. Basement water sensor";
+  $("#rn-clear").hidden = !d.name;
+  $("#rn-result").hidden = true;
+  $("#rename-dialog").showModal();
+  $("#rn-name").focus();
+}
+async function saveName(name) {
+  const out = $("#rn-result");
+  try {
+    const [r, j] = await api("api/device/name", { method: "POST", body: JSON.stringify({ mac: RENAME_MAC, name }) });
+    if (r.status === 401) {
+      $("#rename-dialog").close();
+      const mac = RENAME_MAC;
+      AFTER_SIGNIN = () => openRename(mac);
+      return openSignIn("Sign in to rename devices.");
+    }
+    if (!r.ok) throw new Error(j.error || `error ${r.status}`);
+    $("#rename-dialog").close();
+    setTimeout(refresh, 1500);                 // the box rebuilds its snapshot right away
+  } catch (err) {
+    out.textContent = String(err.message || err);
+    out.className = "result bad";
+    out.hidden = false;
+  }
+}
+$("#rename-form").addEventListener("submit", (e) => { e.preventDefault(); saveName($("#rn-name").value.trim()); });
+$("#rn-clear").addEventListener("click", () => saveName(""));
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-rename]");
+  if (!b) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const mac = b.dataset.rename;
+  if (!SESSION?.signed_in) {
+    AFTER_SIGNIN = () => openRename(mac);
+    openSignIn("Sign in to rename devices.");
+  } else openRename(mac);
+}, true);
+
 function viewDevices(x) {
   const all = mergedDevices(x);
   const weakAt = -70;
@@ -1354,7 +1433,8 @@ function viewDevices(x) {
   const conn = (d) => (d.link ? linkText({ ...d.link, rssi: null }) : `<span class="help">${x.clients ? "not in router's list" : "connect a router to see"}</span>`);
   $("#v-summary").innerHTML = `<p class="help">${all.filter((d) => d.online).length} online now, ${all.length} seen in total.
     ${x.clients ? "Connection details come from the router." : "Connect your router (admin view) to see wired / 2.4 / 5 GHz and signal for each device."}
-    Names and makers come from the device finder (NetAlertX); rename devices there.</p>`;
+    ${canRename() ? "Click ✎ to rename a device." : "Names and makers come from the device finder (NetAlertX); rename devices there."}</p>
+    ${canRename() ? finderPanel(all) : ""}`;
   // fits the page width: guess and maker under the name, MAC under the IP, first/last seen together
   const withUse = rows.some((d) => d.usage), top = maxUsage(rows);
   sortable([
@@ -1366,7 +1446,7 @@ function viewDevices(x) {
     ["last", "Seen", (d) => tsOf(d.last_seen)],
   ], rows, (d) => `<tr class="${d.online ? "" : "off"}">
       <td><span class="sdot ${d.online ? "up" : ""}" title="${d.online ? "online" : "offline"}"></span></td>
-      <td class="dt-name" title="${esc(clueText(d))}">${devLabel(d)} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}
+      <td class="dt-name" title="${esc(clueText(d))}">${devLabel(d)}${renameBtn(d)} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}
         <div class="dt-sub">${[d.name && d.hint ? `<i>looks like ${esc(d.hint)}</i>` : "", esc(d.vendor || ""),
           d.random_mac ? `<span title="Phones and laptops often use a changing private address">private MAC</span>` : ""].filter(Boolean).join(" · ")}</div></td>
       <td class="dt-addr">${esc(d.ip || "")}<div class="dt-sub mono">${esc((d.mac || "").toUpperCase())}</div></td>
