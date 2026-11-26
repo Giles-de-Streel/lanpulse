@@ -1355,21 +1355,25 @@ function viewDevices(x) {
   $("#v-summary").innerHTML = `<p class="help">${all.filter((d) => d.online).length} online now, ${all.length} seen in total.
     ${x.clients ? "Connection details come from the router." : "Connect your router (admin view) to see wired / 2.4 / 5 GHz and signal for each device."}
     Names and makers come from the device finder (NetAlertX); rename devices there.</p>`;
+  // fits the page width: guess and maker under the name, MAC under the IP, first/last seen together
+  const withUse = rows.some((d) => d.usage), top = maxUsage(rows);
   sortable([
-    ["state", "", (d) => (d.online ? 0 : 1)], ["name", "Name", (d) => d.name || ""], ["hint", "Looks like", (d) => d.hint || ""], ["vendor", "Maker", (d) => d.vendor || ""],
-    ["ip", "IP address", (d) => ipNum(d.ip)], ["mac", "MAC", (d) => d.mac || ""], ["conn", "Connection", (d) => d.link?.type || ""],
+    ["state", "", (d) => (d.online ? 0 : 1)],
+    ["name", "Name", (d) => `${sortTier(d)}${sortName(d)}`],
+    ["ip", "IP · MAC", (d) => ipNum(d.ip)], ["conn", "Connection", (d) => d.link?.type || ""],
     ["rssi", "Signal", (d) => d.link?.rssi ?? null],
-    ...(rows.some((d) => d.usage) ? [["usage", "Usage", (d) => usageVal(d)]] : []),
-    ["first", "First seen", (d) => tsOf(d.first_seen)], ["last", "Last seen", (d) => tsOf(d.last_seen)],
+    ...(withUse ? [["usage", "Usage", (d) => usageVal(d)]] : []),
+    ["last", "Seen", (d) => tsOf(d.last_seen)],
   ], rows, (d) => `<tr class="${d.online ? "" : "off"}">
       <td><span class="sdot ${d.online ? "up" : ""}" title="${d.online ? "online" : "offline"}"></span></td>
-      <td title="${esc(clueText(d))}">${devLabel(d)} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</td>
-      <td title="${esc((d.clues || []).join("\n"))}">${esc(d.hint || "")}</td>
-      <td>${esc(d.vendor || "")}${d.random_mac ? ` <span class="help" title="Phones and laptops often use a changing private address">private MAC</span>` : ""}</td>
-      <td>${esc(d.ip || "")}</td><td class="mono">${esc(d.mac || "")}</td><td>${conn(d)}</td>
+      <td class="dt-name" title="${esc(clueText(d))}">${devLabel(d)} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}
+        <div class="dt-sub">${[d.name && d.hint ? `<i>looks like ${esc(d.hint)}</i>` : "", esc(d.vendor || ""),
+          d.random_mac ? `<span title="Phones and laptops often use a changing private address">private MAC</span>` : ""].filter(Boolean).join(" · ")}</div></td>
+      <td class="dt-addr">${esc(d.ip || "")}<div class="dt-sub mono">${esc((d.mac || "").toUpperCase())}</div></td>
+      <td class="dt-wrap">${conn(d)}</td>
       <td>${d.link?.rssi != null ? `<span class="${d.link.rssi < weakAt ? "weak" : ""}">${Math.round(d.link.rssi)} dBm</span>` : ""}</td>
-      ${rows.some((r) => r.usage) ? `<td>${usageHtml(d.usage, maxUsage(rows))}</td>` : ""}
-      <td>${esc(d.first_seen ? ago(d.first_seen) : "")}</td><td>${esc(d.last_seen ? ago(d.last_seen) : "")}</td></tr>`);
+      ${withUse ? `<td class="dt-wrap">${usageHtml(d.usage, top)}</td>` : ""}
+      <td class="dt-seen">${esc(d.last_seen ? ago(d.last_seen) : "")}<div class="dt-sub">${d.first_seen ? `first ${esc(ago(d.first_seen))}` : ""}</div></td></tr>`);
 }
 
 function viewWifi(x) {
