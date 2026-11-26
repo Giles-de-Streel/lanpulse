@@ -1108,3 +1108,28 @@ document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-close]");
   if (b) b.closest("dialog")?.close();
 });
+
+// Wall screen: reload by itself when a new version of the page is deployed. Every minute it asks the
+// server for the page files' version tags (ETag / Last-Modified, a cheap HEAD request); if any changed
+// since the page loaded, it reloads, twice in a row to be sure the deploy has finished.
+if (KIOSK && !VIEW) {
+  const FILES = ["index.html", "app.js", "style.css", "providers.js"];
+  const tag = async (f) => {
+    const r = await fetch(`${f}?v=${Date.now()}`, { method: "HEAD", cache: "no-store" });
+    return r.ok ? (r.headers.get("etag") || r.headers.get("last-modified") || "") : null;
+  };
+  let first = null, changedOnce = false;
+  const check = async () => {
+    try {
+      const now = await Promise.all(FILES.map(tag));
+      if (now.some((t) => t === null)) return;            // server busy or offline: try again later
+      const key = now.join("|");
+      if (first === null) { first = key; return; }
+      if (key === first) { changedOnce = false; return; }
+      if (changedOnce) location.reload();                  // changed on two checks in a row
+      changedOnce = true;
+    } catch { /* offline */ }
+  };
+  check();
+  setInterval(check, 60_000);
+}
