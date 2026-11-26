@@ -202,9 +202,9 @@ function render(snap) {
   // the Wi-Fi signal button is always there; without router data its page says how to get it
   if (!quick.some((i) => i.id === "net-weak-wifi"))
     quick.push({ id: "net-weak-wifi", name: "Wi-Fi signal of devices", note: "Sign in to the router in the admin view to see each device's signal", missing: true });
-  // the device list is a column on the right of the main page; its full-page view stays one click away
-  const sideShown = renderSide(snap.extras || {});
-  renderQuick(sideShown ? quick.filter((i) => i.id !== "net-devices") : quick, snap.extras || {});
+  // the device list is a column on the right of the main page; its full-page view is also a button up top
+  renderSide(snap.extras || {});
+  renderQuick(quick, snap.extras || {});          // Devices button stays too: a quick link without scrolling
   renderClock(snap.extras || {});
   window.lpBooted = true;          // tells the wall screen watchdog in index.html the page came up
   const site = snap.site || {};
