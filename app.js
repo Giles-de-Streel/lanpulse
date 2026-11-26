@@ -257,7 +257,7 @@ function render(snap) {
     sec.dataset.summary = `${g.name}: ${g.items.length === 1 ? "working" : `all ${g.items.length} working`}${gNote ? ` · ${gNote} ${gNote === 1 ? "note" : "notes"}` : ""}`;
     const firstFlag = g.items.find((i) => i.status === "down") || g.items.find((i) => i.status === "warn" && !isNote(i)) || g.items.find(isNote);
     const pills = `${gBad ? `<span class="pill down">${gBad} down</span>` : ""}${gLook ? `<span class="pill warn">${gLook} to look at</span>` : ""}${gNote ? `<span class="pill note">${gNote} ${gNote === 1 ? "note" : "notes"}</span>` : ""}`;
-    sec.innerHTML = `<h2>${esc(g.name)} ${firstFlag && pills ? `<a class="pill-link" href="#tile-${esc(firstFlag.id)}">${pills}</a>` : ""}</h2><div class="tiles${g.items.length >= 3 ? " fill" : ""}"></div>`;
+    sec.innerHTML = `<h2>${esc(g.name)} ${firstFlag && pills ? `<a class="pill-link" href="#tile-${esc(firstFlag.id)}">${pills}</a>` : ""}</h2><div class="tiles${g.items.length === 3 ? " n3" : ""}"></div>`;
     const tiles = $(".tiles", sec);
     // problems first, then things to look at, then working, then lower-priority notes
     const rank = (i) => (i.status === "down" ? 0 : isNote(i) ? 3 : i.status === "warn" ? 1 : 2);
