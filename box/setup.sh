@@ -1,5 +1,6 @@
 #!/bin/bash
-# lanpulse box setup (Linux Mint 22 / Ubuntu 24.04).
+# lanpulse box setup. Tested on Linux Mint 22 (Ubuntu 24.04 base); written to work on any systemd
+# Linux with apt, dnf, zypper or pacman (Debian/Ubuntu/Mint, Fedora/RHEL, openSUSE, Arch).
 # Run from a checkout of the repo:  sudo box/setup.sh
 # Safe to re-run: it skips or refreshes whatever already exists.
 set -euo pipefail
@@ -11,14 +12,28 @@ APP=/opt/monitor
 ADMIN_USER=${SUDO_USER:-$(logname 2>/dev/null || echo root)}
 
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo"; exit 1; }
+[ -d /run/systemd/system ] || { echo "lanpulse needs a systemd-based Linux"; exit 1; }
+. "$BOX/scripts/pkg.sh"
 
-echo "== packages"
-apt-get update -q >/dev/null
-apt-get install -y -q docker.io docker-compose-v2 sqlite3 \
-  nmap arp-scan mtr-tiny iperf3 traceroute dnsutils ethtool wavemon \
-  speedtest-cli net-tools curl snmp smartmontools iw miniupnpc python3 avahi-daemon >/dev/null
+echo "== packages (${PKG_MGR:-unknown package manager} on $(. /etc/os-release; echo "${PRETTY_NAME:-$ID}"))"
+pkg_refresh
+# Docker: keep whatever is already installed (e.g. docker-ce from Docker's own repo), else the distro's
+command -v docker >/dev/null || pkg_install required docker
+pkg_install required python3 sqlite3 curl openssl iproute2 iw avahi ping
+pkg_install optional nmap arp-scan mtr iperf3 traceroute dig ethtool wavemon \
+  speedtest net-tools snmp smartmontools upnpc
 [ "$ADMIN_USER" != root ] && usermod -aG docker "$ADMIN_USER"
 systemctl enable --now docker >/dev/null
+compose_ok || pkg_install optional compose
+if ! compose_ok; then     # distro has no compose package: use Docker's own plugin binary
+  echo "   fetching the docker compose plugin from github.com/docker/compose"
+  mkdir -p /usr/local/lib/docker/cli-plugins
+  curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-compose \
+    "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)"
+  chmod 755 /usr/local/lib/docker/cli-plugins/docker-compose
+fi
+compose_ok || { echo "!! docker compose is missing; install it and re-run"; exit 1; }
+PY=$(command -v python3)
 
 echo "== stack -> $APP"
 mkdir -p "$APP"/scripts "$APP"/data "$APP"/web "$APP"/collector "$APP"/config/requests "$APP"/config/networks
@@ -42,7 +57,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 Environment=APP=$APP
-ExecStart=/usr/bin/python3 $APP/collector/netcheck.py
+ExecStart=$PY $APP/collector/netcheck.py
 Nice=10
 TimeoutStartSec=300
 EOF
@@ -68,7 +83,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 Environment=APP=$APP
-ExecStart=/usr/bin/python3 $APP/collector/netswitch.py
+ExecStart=$PY $APP/collector/netswitch.py
 TimeoutStartSec=300
 EOF
 cat > /etc/systemd/system/lanpulse-requests.service <<EOF
@@ -79,7 +94,7 @@ After=docker.service
 [Service]
 Type=oneshot
 Environment=APP=$APP
-ExecStart=/usr/bin/python3 $APP/collector/netswitch.py --requests
+ExecStart=$PY $APP/collector/netswitch.py --requests
 TimeoutStartSec=300
 EOF
 cat > /etc/systemd/system/lanpulse-requests.path <<EOF
@@ -109,16 +124,18 @@ systemctl start --no-block lanpulse-netcheck.service
 cd "$APP"
 touch .env; chmod 600 .env
 grep -q '^SPEEDTEST_APP_KEY=' .env || echo "SPEEDTEST_APP_KEY=base64:$(openssl rand -base64 32)" >> .env
-sed -i '/^TZ=/d' .env; echo "TZ=$(timedatectl show -p Timezone --value)" >> .env
-docker compose pull -q
-docker compose up -d
-docker compose restart lanpulse-web lanpulse-collector >/dev/null   # pick up new Caddyfile / collector code
+TZNAME=$(timedatectl show -p Timezone --value 2>/dev/null || true)
+[ -n "$TZNAME" ] || TZNAME=$(readlink /etc/localtime 2>/dev/null | sed 's#.*/zoneinfo/##')
+sed -i '/^TZ=/d' .env; echo "TZ=${TZNAME:-UTC}" >> .env
+compose pull -q
+compose up -d
+compose restart lanpulse-web lanpulse-collector >/dev/null   # pick up new Caddyfile / collector code
 
 LP_HOST=${LANPULSE_HOSTNAME-lanpulse}         # LANPULSE_HOSTNAME= (empty) keeps the current name
 echo "== name on the network: http://${LP_HOST:-$(hostname)}.local:8080 works whatever address the box gets"
 if [ -n "$LP_HOST" ] && [ "$(hostname)" != "$LP_HOST" ]; then
   OLD=$(hostname)
-  hostnamectl set-hostname "$LP_HOST"
+  hostnamectl set-hostname "$LP_HOST" 2>/dev/null || echo "$LP_HOST" > /etc/hostname
   sed -i -E "s/^(127\.0\.1\.1[[:space:]]+)$OLD([[:space:]].*)?$/\1$LP_HOST/" /etc/hosts   # keep sudo able to resolve the new name
   grep -q "^127\.0\.1\.1" /etc/hosts || echo "127.0.1.1 $LP_HOST" >> /etc/hosts
   echo "renamed $OLD -> $LP_HOST"
@@ -126,12 +143,20 @@ fi
 systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
 systemctl restart avahi-daemon >/dev/null 2>&1 || true
 
-echo "== firewall (only matters if ufw is enabled)"
-ufw allow ssh >/dev/null
-ufw allow 5353/udp >/dev/null           # mDNS, so <name>.local can be found
-for net in 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16; do
-  for p in 3001 8080 20211 8765; do ufw allow from $net to any port $p proto tcp >/dev/null; done
-done
+echo "== firewall (ufw or firewalld, whichever this distro uses)"
+if command -v ufw >/dev/null; then      # rules only take effect if ufw is enabled
+  ufw allow ssh >/dev/null
+  ufw allow 5353/udp >/dev/null         # mDNS, so <name>.local can be found
+  for net in 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16; do
+    for p in 3001 8080 20211 8765; do ufw allow from $net to any port $p proto tcp >/dev/null; done
+  done
+elif command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
+  for svc in ssh mdns; do firewall-cmd -q --permanent --add-service=$svc || true; done
+  for p in 3001 8080 20211 8765; do firewall-cmd -q --permanent --add-port=$p/tcp || true; done
+  firewall-cmd -q --reload || true
+else
+  echo "   no ufw/firewalld running: nothing to open"
+fi
 
 echo "== power: never sleep, ignore lid"
 mkdir -p /etc/systemd/logind.conf.d
@@ -147,16 +172,42 @@ EOF
 systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target >/dev/null 2>&1
 
 echo "== boot menu always visible (recovery fallback)"
-cat > /etc/default/grub.d/99_monitor.cfg <<EOF
+if [ -d /etc/default/grub.d ] && command -v update-grub >/dev/null; then   # Debian/Ubuntu/Mint style GRUB
+  cat > /etc/default/grub.d/99_monitor.cfg <<EOF
 GRUB_DISTRIBUTOR="$(. /etc/os-release; echo "$NAME")"
 GRUB_TIMEOUT_STYLE=menu
 GRUB_TIMEOUT=5
 GRUB_DISABLE_OS_PROBER=true
 EOF
-(cd / && update-grub >/dev/null 2>&1) || echo "update-grub failed, check manually"
+  (cd / && update-grub >/dev/null 2>&1) || echo "update-grub failed, check manually"
+else
+  echo "   skipped: not a Debian-style GRUB setup (boot menu left as the distro set it)"
+fi
 
 echo "== nightly data backup (03:30, keeps 14)"
-echo "30 3 * * * root $APP/scripts/backup.sh >/dev/null 2>&1" > /etc/cron.d/monitor-backup
+rm -f /etc/cron.d/monitor-backup       # older installs used cron; a systemd timer works on every distro
+cat > /etc/systemd/system/lanpulse-backup.service <<EOF
+[Unit]
+Description=lanpulse nightly data backup
+
+[Service]
+Type=oneshot
+Environment=APP=$APP
+ExecStart=$APP/scripts/backup.sh
+EOF
+cat > /etc/systemd/system/lanpulse-backup.timer <<'EOF'
+[Unit]
+Description=lanpulse nightly data backup at 03:30
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now lanpulse-backup.timer >/dev/null 2>&1
 
 echo "== done"
 docker ps --format '{{.Names}}  {{.Status}}'

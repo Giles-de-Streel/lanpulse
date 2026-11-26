@@ -28,7 +28,7 @@ Local-only is the default. Nothing leaves the box unless you turn on a publisher
 
 ## Quick start (on the box)
 
-Tested on Linux Mint 22.3 Xfce on a Dell Latitude 7380 (4 GB RAM). It should work on any Ubuntu 24.04-based system.
+Tested on Linux Mint 22.3 Xfce on a Dell Latitude 7380 (4 GB RAM). The setup scripts are written for any systemd-based Linux with apt, dnf, zypper or pacman: Debian, Ubuntu and Mint, Fedora and RHEL-like distros, openSUSE, and Arch. They pick the right package names and use whatever firewall (ufw or firewalld) and login manager (LightDM, GDM or SDDM) the distro has. Only Mint has been tested on real hardware so far; the package names are checked on all five families.
 
 ```bash
 git clone https://github.com/Giles-de-Streel/lanpulse.git
@@ -54,7 +54,7 @@ Keep your site CSVs somewhere private (your own repo or the box). They describe 
 
 ## What `setup.sh` does
 
-- installs Docker (Ubuntu repos) and CLI tools: nmap, arp-scan, mtr, iperf3, wavemon, speedtest-cli, snmp, smartctl
+- installs Docker from the distro's own packages, keeping an existing Docker (for example docker-ce) if there is one, plus CLI tools: nmap, arp-scan, mtr, iperf3, wavemon, speedtest-cli, snmp, smartctl. A tool the distro doesn't package is skipped
 - runs the stack in `/opt/monitor`
 
   | Service | Port |
@@ -65,7 +65,8 @@ Keep your site CSVs somewhere private (your own repo or the box). They describe 
   | Speedtest Tracker | 8765 |
   | collector | none |
 
-- disables sleep, suspend and the lid switch, and makes the GRUB menu always visible so an older kernel is one keypress away
+- disables sleep, suspend and the lid switch. On Debian-style GRUB setups it also makes the boot menu always visible, so an older kernel is one keypress away
+- opens the dashboard ports in ufw or firewalld, if either is running
 - adds a nightly data backup to `/opt/monitor/backups` (keeps 14)
 
 It is safe to re-run, for example after a `git pull`.

@@ -9,7 +9,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"   # lets monitors check the other tools on this box
     volumes:
-      - ./uptime-kuma:/app/data
+      - ./uptime-kuma:/app/data:z
 
   # Finds every device on the LAN, flags new/unknown ones (http://<host>:20211)
   netalertx:
@@ -22,7 +22,7 @@ services:
       - TZ=${TZ:-UTC}
       - PORT=20211
     volumes:
-      - ./netalertx:/data
+      - ./netalertx:/data:z
 
   # Scheduled internet speed tests with history graphs (http://<host>:8765)
   speedtest-tracker:
@@ -41,7 +41,7 @@ services:
       - SPEEDTEST_SCHEDULE=0 */4 * * *
       - DISPLAY_TIMEZONE=${TZ:-UTC}
     volumes:
-      - ./speedtest-tracker:/config
+      - ./speedtest-tracker:/config:z
 
   # lanpulse collector: reads the Uptime Kuma status page, writes data/snapshot.json,
   # and optionally pushes it to cloud publishers (see lanpulse.env.example)
@@ -56,10 +56,10 @@ services:
       - PUBLISH_FILE_DIR=/data
       - TZ=${TZ:-UTC}
     volumes:
-      - ./collector:/app:ro
-      - ./data:/data
-      - ./uptime-kuma:/kuma:ro      # read-only: maps monitors to IPs for router link info
-      - ./config:/config            # settings saved from the dashboard (router login); never served
+      - ./collector:/app:ro,z
+      - ./data:/data:z
+      - ./uptime-kuma:/kuma:ro,z      # read-only: maps monitors to IPs for router link info
+      - ./config:/config:z            # settings saved from the dashboard (router login); never served
     depends_on: [uptime-kuma]
 
   # lanpulse dashboard: the web app plus live data (http://<host>:8080)
@@ -70,6 +70,6 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./web:/srv/www:ro
-      - ./data:/srv/data:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro,z
+      - ./web:/srv/www:ro,z
+      - ./data:/srv/data:ro,z

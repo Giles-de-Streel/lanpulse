@@ -1,5 +1,6 @@
 #!/bin/bash
-# Turn the box's screen into a volunteer dashboard (Linux Mint Xfce / LightDM).
+# Turn the box's screen into a volunteer dashboard. Tested on Linux Mint Xfce (LightDM); also handles
+# GDM (GNOME) and SDDM (KDE) auto-login, and Firefox or Chromium/Chrome as the browser.
 #   sudo kiosk-setup.sh [user] [url]
 # Defaults: user "monitor", url http://localhost:8080/?kiosk (lanpulse dashboard)
 #           use http://localhost:3001/status/dashboard for the plain Uptime Kuma page
@@ -8,7 +9,7 @@
 # - its session opens Firefox full screen on the status page, restarting it if it crashes
 # - no screen lock, no screensaver, no screen blanking, no sleep, no update pop-ups
 # - closing Firefox normally (Alt+F4) leaves a desktop icon to reopen the dashboard
-# - Mint automatic updates are turned on, since nobody will click "install updates"
+# - automatic updates are turned on where the distro supports it, since nobody will click "install updates"
 # Safe to re-run. The user's password is printed once and saved in /opt/monitor/.env.
 set -euo pipefail
 KUSER=${1:-monitor}
@@ -16,6 +17,7 @@ URL=${2:-http://localhost:8080/?kiosk}
 APP=${APP:-/opt/monitor}
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo"; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
+. "$(cd "$(dirname "$0")" && pwd)/pkg.sh"
 
 echo "== user $KUSER"
 id "$KUSER" >/dev/null 2>&1 || { useradd -m -s /bin/bash -c "Network dashboard" "$KUSER"; echo "   created"; }
@@ -28,19 +30,57 @@ else
   echo "   password unchanged (see KIOSK_PASSWORD in $APP/.env)"
 fi
 groupadd -f -r autologin; usermod -aG autologin "$KUSER"
-for g in sudo adm docker lpadmin sambashare; do gpasswd -d "$KUSER" $g >/dev/null 2>&1 || true; done
+for g in sudo wheel adm docker lpadmin sambashare; do gpasswd -d "$KUSER" $g >/dev/null 2>&1 || true; done
 
-echo "== auto-login"
-mkdir -p /etc/lightdm/lightdm.conf.d
-cat > /etc/lightdm/lightdm.conf.d/70-kiosk-autologin.conf <<EOF
+# which desktop session to log into: the first of these that's installed, else whatever is there
+pick_session() {   # pick_session DIR...  -> session name (file name without .desktop)
+  local s d
+  for s in xfce cinnamon mate gnome-xorg gnome plasma plasmax11 lxqt; do
+    for d in "$@"; do [ -f "$d/$s.desktop" ] && { echo "$s"; return; }; done
+  done
+  for d in "$@"; do for s in "$d"/*.desktop; do [ -f "$s" ] && { basename "$s" .desktop; return; }; done; done
+}
+DM=$(basename "$(readlink -f /etc/systemd/system/display-manager.service 2>/dev/null)" .service)
+[ -n "$DM" ] && [ "$DM" != display-manager ] || DM=$(for d in lightdm gdm gdm3 sddm; do systemctl is-enabled -q $d 2>/dev/null && { echo $d; break; }; done; true)
+echo "== auto-login (${DM:-no display manager found})"
+case "$DM" in
+  lightdm)
+    SESSION=$(pick_session /usr/share/xsessions)
+    mkdir -p /etc/lightdm/lightdm.conf.d
+    cat > /etc/lightdm/lightdm.conf.d/70-kiosk-autologin.conf <<EOF
 [Seat:*]
 autologin-user=$KUSER
 autologin-user-timeout=0
-autologin-session=xfce
+autologin-session=${SESSION:-xfce}
 EOF
+    ;;
+  gdm|gdm3)
+    CONF=/etc/gdm3/custom.conf; [ -d /etc/gdm3 ] || CONF=/etc/gdm/custom.conf
+    mkdir -p "$(dirname "$CONF")"; [ -f "$CONF" ] || printf '[daemon]\n' > "$CONF"
+    grep -q '^\[daemon\]' "$CONF" || printf '\n[daemon]\n' >> "$CONF"
+    sed -i -E '/^#?\s*AutomaticLogin(Enable)?\s*=/d' "$CONF"
+    sed -i "/^\[daemon\]/a AutomaticLoginEnable=True\nAutomaticLogin=$KUSER" "$CONF"
+    ;;
+  sddm)
+    SESSION=$(pick_session /usr/share/xsessions /usr/share/wayland-sessions)
+    mkdir -p /etc/sddm.conf.d
+    cat > /etc/sddm.conf.d/70-kiosk-autologin.conf <<EOF
+[Autologin]
+User=$KUSER
+Session=${SESSION:-plasma}.desktop
+Relogin=true
+EOF
+    ;;
+  *) echo "   set up automatic login for '$KUSER' in your login manager by hand" ;;
+esac
 
 echo "== packages"
-apt-get install -y -q unclutter >/dev/null 2>&1 || echo "   (unclutter not available, cursor stays visible)"
+pkg_install optional unclutter || true
+command -v unclutter >/dev/null || echo "   (unclutter not available, cursor stays visible)"
+if ! command -v firefox >/dev/null && ! command -v chromium >/dev/null && ! command -v chromium-browser >/dev/null \
+   && ! command -v google-chrome >/dev/null; then
+  pkg_install optional firefox || true
+fi
 
 H=$(getent passwd "$KUSER" | cut -d: -f6)
 install -d -o "$KUSER" -g "$KUSER" "$H/.config" "$H/.config/autostart" "$H/.local" "$H/.local/bin" \
@@ -49,15 +89,38 @@ install -d -o "$KUSER" -g "$KUSER" "$H/.config" "$H/.config/autostart" "$H/.loca
 echo "== dashboard launcher"
 cat > "$H/.local/bin/dashboard" <<EOF
 #!/bin/bash
-# Full-screen dashboard. Restarts Firefox if it crashes; a normal close (Alt+F4) exits.
+# Full-screen dashboard. Restarts the browser if it crashes; a normal close (Alt+F4) exits.
 URL="$URL"
+# no screen blanking or locking, whichever desktop this is (each line is a no-op elsewhere)
 xset s off -dpms s noblank 2>/dev/null || true
-pgrep -u "\$USER" -x unclutter >/dev/null || (command -v unclutter >/dev/null && unclutter -idle 3 -root &)
-# wait for Uptime Kuma to answer (it starts with the box)
+if command -v gsettings >/dev/null; then
+  gsettings set org.gnome.desktop.session idle-delay 0 2>/dev/null || true
+  gsettings set org.gnome.desktop.screensaver lock-enabled false 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type nothing 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.power idle-dim false 2>/dev/null || true
+fi
+for kw in kwriteconfig6 kwriteconfig5; do
+  command -v \$kw >/dev/null && { \$kw --file kscreenlockerrc --group Daemon --key Autolock false; \$kw --file kscreenlockerrc --group Daemon --key LockOnResume false; break; }
+done
+[ -z "\${WAYLAND_DISPLAY:-}" ] && { pgrep -u "\$USER" -x unclutter >/dev/null || (command -v unclutter >/dev/null && unclutter -idle 3 -root &); }
+# wait for the dashboard to answer (it starts with the box)
 for i in \$(seq 1 60); do curl -s -o /dev/null "\$URL" && break; sleep 3; done
+# Firefox if installed (a snap Firefox can't use a hidden profile folder), else Chromium / Chrome
+PROFILE="\$HOME/.kiosk-firefox"
+if command -v firefox >/dev/null && readlink -f "\$(command -v firefox)" | grep -q snap; then
+  PROFILE="\$HOME/snap/firefox/common/kiosk-profile"; mkdir -p "\$PROFILE"; cp -f "\$HOME/.kiosk-firefox/user.js" "\$PROFILE/"
+fi
+CHROME=\$(command -v chromium || command -v chromium-browser || command -v google-chrome || command -v google-chrome-stable || true)
 while true; do
-  rm -f "\$HOME/.kiosk-firefox/lock" "\$HOME/.kiosk-firefox/.parentlock"
-  firefox --no-remote --profile "\$HOME/.kiosk-firefox" --kiosk "\$URL"
+  if command -v firefox >/dev/null; then
+    rm -f "\$PROFILE/lock" "\$PROFILE/.parentlock"
+    firefox --no-remote --profile "\$PROFILE" --kiosk "\$URL"
+  elif [ -n "\$CHROME" ]; then
+    "\$CHROME" --kiosk --no-first-run --noerrdialogs --disable-session-crashed-bubble --disable-infobars \
+      --password-store=basic --user-data-dir="\$HOME/.kiosk-chromium" "\$URL"
+  else
+    echo "no Firefox or Chromium installed"; exit 1
+  fi
   rc=\$?
   [ \$rc -eq 0 ] && break      # closed on purpose
   sleep 5                      # crashed: reopen
@@ -135,11 +198,22 @@ cat > "$H/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-screensaver.xml" <<'EOF
 EOF
 chown -R "$KUSER:$KUSER" "$H"
 
-echo "== Mint automatic updates"
+echo "== automatic updates"
 if command -v mintupdate-automation >/dev/null; then
-  { mintupdate-automation upgrade enable && mintupdate-automation autoremove enable; } >/dev/null 2>&1 && echo "   enabled"
+  { mintupdate-automation upgrade enable && mintupdate-automation autoremove enable; } >/dev/null 2>&1 && echo "   Mint automatic updates enabled"
+elif [ "$PKG_MGR" = apt-get ]; then
+  pkg_install optional autoupdate && { echo 'APT::Periodic::Update-Package-Lists "1";'; echo 'APT::Periodic::Unattended-Upgrade "1";'; } \
+    > /etc/apt/apt.conf.d/20auto-upgrades && echo "   unattended-upgrades enabled (security updates)"
+elif [ "$PKG_MGR" = dnf ]; then
+  pkg_install optional autoupdate || true
+  if systemctl list-unit-files dnf5-automatic.timer >/dev/null 2>&1; then
+    mkdir -p /etc/dnf; printf '[commands]\napply_updates = yes\n' > /etc/dnf/automatic.conf
+    systemctl enable --now dnf5-automatic.timer >/dev/null 2>&1 && echo "   dnf5-automatic enabled"
+  elif systemctl list-unit-files dnf-automatic-install.timer >/dev/null 2>&1; then
+    systemctl enable --now dnf-automatic-install.timer >/dev/null 2>&1 && echo "   dnf-automatic enabled"
+  fi
 else
-  echo "   mintupdate-automation not found (not Mint?), relying on unattended-upgrades"
+  echo "   not set up on this distro: keep the box updated by hand"
 fi
 
 echo "== done. Reboot to start the dashboard: sudo reboot"
