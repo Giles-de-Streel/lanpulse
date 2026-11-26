@@ -718,6 +718,12 @@ def check_devices(state):
     for d in devs:
         if d["mac"].lower() in own:
             d["new"], d["this_box"] = False, True
+    if enabled("identify"):          # "probably a Govee light" etc. for unnamed devices (identify.py)
+        try:
+            import identify
+            identify.identify(devs, state)
+        except Exception as e:
+            print(f"identify: {e}", file=sys.stderr)
     online = [d for d in devs if d["online"]]
     new = [d for d in devs if d["new"]]
     unknown = [d for d in online if not d["name"] and not d["vendor"] and not d["random_mac"]]

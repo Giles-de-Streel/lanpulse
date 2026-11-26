@@ -21,7 +21,7 @@ pkg_refresh
 command -v docker >/dev/null || pkg_install required docker
 pkg_install required python3 sqlite3 curl openssl iproute2 iw avahi ping
 pkg_install optional nmap arp-scan mtr iperf3 traceroute dig ethtool wavemon \
-  speedtest net-tools snmp smartmontools upnpc
+  speedtest net-tools snmp smartmontools upnpc avahi-browse
 [ "$ADMIN_USER" != root ] && usermod -aG docker "$ADMIN_USER"
 systemctl enable --now docker >/dev/null
 compose_ok || pkg_install optional compose
@@ -42,7 +42,7 @@ install -m 644 "$BOX/docker-compose.yml" "$BOX/Caddyfile" "$APP/"
 install -m 755 "$BOX"/scripts/*.sh "$APP/scripts/"
 rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/"
 install -m 644 "$REPO"/collector/collector.py "$REPO"/collector/netcheck.py "$REPO"/collector/history.py \
-  "$REPO"/collector/netswitch.py "$APP/collector/"
+  "$REPO"/collector/netswitch.py "$REPO"/collector/identify.py "$APP/collector/"
 [ -f "$APP/lanpulse.env" ] || install -m 600 "$BOX/lanpulse.env.example" "$APP/lanpulse.env"
 # older installs: turn on the netcheck and router sources (router stays idle until ROUTER_TYPE is set)
 sed -i 's/^LANPULSE_SOURCES=uptime-kuma$/LANPULSE_SOURCES=uptime-kuma,netcheck,router/' "$APP/lanpulse.env"

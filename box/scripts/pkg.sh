@@ -20,6 +20,7 @@ pkg_name() {
     apt-get:ping)      echo iputils-ping ;;
     apt-get:upnpc)     echo miniupnpc ;;
     apt-get:avahi)     echo avahi-daemon ;;
+    apt-get:avahi-browse) echo avahi-utils ;;
     apt-get:speedtest) echo speedtest-cli ;;
     apt-get:autoupdate) echo unattended-upgrades ;;
 
@@ -31,6 +32,7 @@ pkg_name() {
     dnf:snmp)          echo net-snmp-utils ;;
     dnf:upnpc)         echo miniupnpc ;;
     dnf:avahi)         echo avahi ;;
+    dnf:avahi-browse)  echo avahi-tools ;;
     dnf:sqlite3)       echo sqlite ;;
     dnf:speedtest)     echo speedtest-cli ;;
     dnf:unclutter)     echo unclutter-xfixes ;;
@@ -43,6 +45,7 @@ pkg_name() {
     zypper:snmp)       echo net-snmp ;;
     zypper:upnpc)      echo miniupnpc ;;
     zypper:avahi)      echo avahi ;;
+    zypper:avahi-browse) echo avahi-utils ;;
     zypper:speedtest)  echo speedtest-cli ;;
     zypper:iperf3)     echo iperf ;;
     zypper:firefox)    echo MozillaFirefox ;;
@@ -56,6 +59,7 @@ pkg_name() {
     pacman:snmp)       echo net-snmp ;;
     pacman:upnpc)      echo miniupnpc ;;
     pacman:avahi)      echo avahi ;;
+    pacman:avahi-browse) echo avahi ;;
     pacman:sqlite3)    echo sqlite ;;
     pacman:speedtest)  echo speedtest-cli ;;
     pacman:autoupdate) echo "" ;;   # Arch expects updates to be watched by a person
