@@ -90,12 +90,14 @@
 
   <dialog id="router-dialog">
     <form id="router-form" method="dialog" autocomplete="off">
-      <h2>Connect your router</h2>
+      <h2>Sign in to your router</h2>
+      <p id="r-detected" class="result good" hidden></p>
       <p class="help">Lets the dashboard show how every device is connected: by cable or on 2.4, 5 or 6 GHz Wi-Fi, which access point it uses and how strong its signal is. The login is stored only on this box. It is never shown again or sent anywhere else.</p>
       <label>Router or gateway
         <select id="r-type" required></select>
       </label>
       <p id="r-help" class="help"></p>
+      <p class="help"><a id="r-open" href="#" target="_blank" rel="noopener">Open the router's own page ↗</a> to check the login works there, or to change it.</p>
       <label>Address
         <input id="r-url" type="text" placeholder="http://192.168.1.1" required spellcheck="false">
       </label>
@@ -111,7 +113,7 @@
         <span class="spacer"></span>
         <button type="button" class="ghost" data-close>Close</button>
         <button type="button" id="r-test" class="ghost">Test</button>
-        <button type="button" id="r-save">Save and connect</button>
+        <button type="submit" id="r-save">Save and connect</button>
       </menu>
     </form>
   </dialog>
