@@ -342,3 +342,5 @@ dialog.wide { width: min(900px, 96vw); }
 .dv-table td { padding: .2rem .3rem; }
 .dv-table input, .dv-table select { margin-top: 0 !important; padding: .35rem .45rem !important; min-width: 7rem; }
 #net-info { font-size: .8rem; }
+
+.tile-action { margin-top: .45rem; }

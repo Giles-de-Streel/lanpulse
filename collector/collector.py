@@ -491,7 +491,7 @@ def _router_signin():
     if st["type"] and st["has_password"]:
         status, note = "warn", f"Can't sign in to the router: {st['error'] or 'no answer'}. Check the login in the admin view."
     else:
-        status, note = "note", "Not signed in to the router. " + where
+        status, note = "note", "Not signed in to the router. " + where.replace("Sign in from the admin view (Router connection)", "Sign in")
     item = {"id": "router-signin", "name": "Router sign-in", "kind": "netcheck", "status": status, "priority": "low",
             "note": note, "message": note}
     return {"groups": [{"name": "Network health", "items": [item]}], "extras": {"router": st}}
@@ -799,6 +799,46 @@ def gateway_ip():
         return None
 
 
+_detect_cache = {}
+
+
+def detect_router(gw):
+    """Which kind of router answers at the gateway, so the sign-in prompt can be pre-filled.
+    Looks only at pages that need no login. Returns a ROUTER_INFO key or None; cached per gateway."""
+    if not gw:
+        return None
+    hit = _detect_cache.get(gw)
+    if hit and time.time() - hit[1] < 3600:
+        return hit[0]
+    op, kind = _opener()[0], None
+
+    def get(url):
+        try:
+            r = op.open(urllib.request.Request(url, headers={"User-Agent": "lanpulse"}), timeout=3)
+            return r.status, r.read(65536).decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            return e.code, ""
+        except Exception:
+            return None, ""
+
+    st, body = get(f"http://{gw}/TMI/v1/gateway?get=all")
+    if st == 200 and '"device"' in body:
+        kind = "tmobile"
+    if not kind:
+        st, body = get(f"http://{gw}/")
+        low = body.lower()
+        if "asus" in low and ("login" in low or "main_login" in low):
+            kind = "asus"
+        elif "luci" in low or get(f"http://{gw}/cgi-bin/luci")[0] in (200, 403):
+            kind = "openwrt"
+        else:
+            st, body = get(f"https://{gw}/")
+            if "unifi" in body.lower():
+                kind = "unifi"
+    _detect_cache[gw] = (kind, time.time())
+    return kind
+
+
 class SettingsAPI(BaseHTTPRequestHandler):
     server_version = "lanpulse"
 
@@ -846,7 +886,8 @@ class SettingsAPI(BaseHTTPRequestHandler):
         except Exception as e:
             log(f"ntfy lookup failed: {e}")
             alerts = []
-        return {"router": router_status(), "router_types": types, "gateway": gw, "alerts": alerts}
+        return {"router": router_status(), "router_types": types, "gateway": gw, "alerts": alerts,
+                "router_detected": detect_router(gw)}
 
     def _body(self):
         try:

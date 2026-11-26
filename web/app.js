@@ -143,6 +143,7 @@ function renderQuick(items, x) {
     return `<a class="qbtn${i.missing ? " needs" : ""}" href="${viewHref(TILE_VIEWS[i.id][0])}"${KIOSK ? "" : ` target="_blank" rel="noopener"`} title="${esc(i.note || i.message || "")}">
       <b>${esc(names[i.id] || i.name)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}<i aria-hidden="true">↗</i></a>`;
   }).join("");
+  el.querySelectorAll(".qbtn.needs").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); startRouterSignin(); }));
   if (x.history) {
     const n = historyCount(x, 1);
     el.insertAdjacentHTML("beforeend", `<a class="qbtn" href="${viewHref("history")}"${KIOSK ? "" : ` target="_blank" rel="noopener"`}>
@@ -233,6 +234,7 @@ function render(snap) {
           <div class="meta">${i.note ? esc(i.note) : meta}</div>
           ${i.hint && i.status !== "up" ? `<div class="hint">What to do: ${esc(i.hint)}</div>` : ""}
           ${TILE_VIEWS[i.id] ? `<a class="more" href="${viewHref(TILE_VIEWS[i.id][0])}"${KIOSK ? "" : ` target="_blank" rel="noopener"`}>${TILE_VIEWS[i.id][1]} ↗</a>` : ""}
+          ${i.id === "router-signin" ? `<button type="button" class="small tile-action" data-router-signin>Sign in to the router</button>` : ""}
           ${i.link && !i.note ? `<div class="link">${linkText(i.link)}</div>` : ""}
           ${bars ? `<div class="bars">${bars}</div>` : ""}
         </div>
@@ -241,6 +243,7 @@ function render(snap) {
     }
     groups.append(sec);
   }
+  document.querySelectorAll("[data-router-signin]").forEach((b) => (b.onclick = startRouterSignin));
   renderDetails(snap.extras || {});
   const net = (snap.extras || {}).network;
   $("#net-info").textContent = net ? `On ${net.name}${net.kind ? ` · ${net.kind === "Wi-Fi" ? `Wi-Fi${net.ssid ? ` ${net.ssid}` : ""}` : "cable"}` : ""}` : "";
@@ -532,7 +535,14 @@ async function loadBoxSettings() {
   if (SESSION.signed_in) {
     try {
       const [r, j] = await api("api/settings");
-      if (r.ok) { BOX = j; renderSetup(); }
+      if (r.ok) {
+        BOX = j; renderSetup();
+        const need = BOX.router && BOX.router.type !== "none" && !BOX.router.ok;
+        if (params.has("router") || (need && params.has("admin") && !sessionStorage.getItem("lp-router-asked"))) {
+          sessionStorage.setItem("lp-router-asked", "1");
+          if (!$("#router-dialog").open) openRouterDialog();
+        }
+      }
     } catch { /* ignore */ }
     if (params.has("admin")) renderAdminPanel();
   } else {
@@ -559,15 +569,19 @@ function renderAdminBar() {
     await api("api/logout", { method: "POST", body: "{}" });
     if (FROM_KIOSK) location.href = "./?kiosk"; else loadBoxSettings();
   });
-  $("#signin")?.addEventListener("click", openSignIn);
+  $("#signin")?.addEventListener("click", () => openSignIn());
 }
 
-function openSignIn() {
+var AFTER_SIGNIN = null;              // what to do once signed in (instead of opening the admin view)
+function openSignIn(why) {
+  if (typeof why !== "string") why = "";
+  if (!why) AFTER_SIGNIN = null;
   const first = !SESSION.admin_set;
   $("#si-title").textContent = first ? "Create the administrator password" : "Administrator sign-in";
   $("#si-help").textContent = first
     ? "No administrator password has been set on this box yet. Choose one (at least 8 characters). It is needed to change settings such as the router connection. Only a scrambled (hashed) copy is stored on the box."
     : "Sign in to change settings such as the router connection.";
+  if (why) $("#si-help").textContent = first ? `${why} ${$("#si-help").textContent}` : why;
   $("#si-confirm-wrap").hidden = !first;
   $("#si-go").textContent = first ? "Create and sign in" : "Sign in";
   $("#si-pass").value = $("#si-confirm").value = "";
@@ -588,6 +602,7 @@ $("#signin-form").addEventListener("submit", async (e) => {
     const [r, j] = await api(first ? "api/admin/setup" : "api/login", { method: "POST", body: JSON.stringify({ password: pw }) });
     if (!r.ok) return say(j.error || `Failed (HTTP ${r.status})`);
     $("#signin-dialog").close();
+    if (AFTER_SIGNIN) { const next = AFTER_SIGNIN; AFTER_SIGNIN = null; await loadBoxSettings(); next(); return; }
     if (!params.has("admin")) { location.href = `./?admin${FROM_KIOSK ? "&from=kiosk" : ""}`; return; }
     await loadBoxSettings();
   } catch (err) { say(`Couldn't reach the box: ${err.message}`); }
@@ -765,7 +780,10 @@ function openRouterDialog() {
     if (t && (!keepUser || !$("#r-url").value)) $("#r-url").value = t.url;
     if (t && (!keepUser || !$("#r-user").value)) $("#r-user").value = t.user;
   };
-  sel.value = st.type && st.type !== "none" ? st.type : "";
+  const found = types.find((t) => t.id === BOX.router_detected);
+  sel.value = st.type && st.type !== "none" ? st.type : (found ? found.id : "");
+  $("#r-detected").hidden = !(found && !st.has_password);
+  if (found) $("#r-detected").textContent = `Found your router: ${found.label} at ${found.url}. Enter its admin password below.`;
   $("#r-url").value = st.url || "";
   $("#r-user").value = st.user || "";
   fill(true);
@@ -777,9 +795,29 @@ function openRouterDialog() {
   $("#r-result").hidden = true;
   $("#r-show").onclick = () => { const p = $("#r-pass"); p.type = p.type === "password" ? "text" : "password"; $("#r-show").textContent = p.type === "password" ? "Show" : "Hide"; };
   $("#r-test").onclick = () => routerAction("test");
-  $("#r-save").onclick = () => routerAction("save");
+  $("#router-form").onsubmit = (e) => { e.preventDefault(); routerAction("save"); };
+  const link = () => { const u = ($("#r-url").value.split(",")[0] || "").trim(); $("#r-open").href = u || "#"; $("#r-open").parentElement.hidden = !u; };
+  $("#r-url").oninput = link;
+  sel.addEventListener("change", link);
+  link();
   $("#r-remove").onclick = () => routerAction("remove");
   d.showModal();
+  (sel.value ? $("#r-pass") : sel).focus();
+}
+
+// One step from anywhere on the dashboard: sign in as administrator if needed, then the router prompt.
+async function startRouterSignin() {
+  if (KIOSK) { location.href = "./?admin&from=kiosk&router=1"; return; }
+  try { const [, s] = await api("api/session"); SESSION = s; } catch { return; }
+  if (!SESSION.signed_in) {
+    AFTER_SIGNIN = startRouterSignin;
+    openSignIn("To sign in to the router, first sign in as this box's administrator.");
+    return;
+  }
+  if (!BOX) {
+    try { const [r, j] = await api("api/settings"); if (!r.ok) return; BOX = j; } catch { return; }
+  }
+  openRouterDialog();
 }
 
 async function routerAction(action) {
@@ -798,7 +836,7 @@ async function routerAction(action) {
       const bands = Object.entries(j.client_bands || {}).map(([k, v]) => `${v} ${k}`).join(", ");
       show(`${action === "save" ? "Saved and connected" : "It works"}: ${j.clients} devices${bands ? ` (${bands})` : ""}` +
            `${j.nodes > 1 ? `, ${j.nodes} access points` : ""}.${action === "test" ? " Press Save and connect to keep it." : " The dashboard updates in a few seconds."}`, true);
-      if (action === "save") $("#r-pass").value = "";
+      if (action === "save") { $("#r-pass").value = ""; setTimeout(() => $("#router-dialog").close(), 2500); }
     }
     await loadBoxSettings();
     if (action !== "test") setTimeout(refresh, 3000);
