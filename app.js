@@ -340,8 +340,7 @@ function usageHtml(u, top) {
 // Unnamed devices: the box's best guess (identify.py) in italics, plus the end of the MAC address so
 // several alike devices can be told apart. Hover shows the clues.
 const macTail = (d) => (d.mac ? `…${d.mac.slice(-5)}` : "");
-const clueText = (d) => [d.vendor, d.mac, ...(d.clues || [])].filter(Boolean).join("
-");
+const clueText = (d) => [d.vendor, d.mac, ...(d.clues || [])].filter(Boolean).join("\n");
 function devLabel(d) {
   if (d.name) return esc(d.name);
   if (d.hint) return `<span class="guess">Probably ${esc(d.hint)}</span> <span class="help mono">${esc(macTail(d))}</span>`;
@@ -1328,8 +1327,7 @@ function viewDevices(x) {
   ], rows, (d) => `<tr class="${d.online ? "" : "off"}">
       <td><span class="sdot ${d.online ? "up" : ""}" title="${d.online ? "online" : "offline"}"></span></td>
       <td title="${esc(clueText(d))}">${devLabel(d)} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</td>
-      <td title="${esc((d.clues || []).join("
-"))}">${esc(d.hint || "")}</td>
+      <td title="${esc((d.clues || []).join("\n"))}">${esc(d.hint || "")}</td>
       <td>${esc(d.vendor || "")}${d.random_mac ? ` <span class="help" title="Phones and laptops often use a changing private address">private MAC</span>` : ""}</td>
       <td>${esc(d.ip || "")}</td><td class="mono">${esc(d.mac || "")}</td><td>${conn(d)}</td>
       <td>${d.link?.rssi != null ? `<span class="${d.link.rssi < weakAt ? "weak" : ""}">${Math.round(d.link.rssi)} dBm</span>` : ""}</td>
