@@ -816,7 +816,7 @@ async function netRequest(body, out) {
   const say = (m, ok) => { if (!out) return; out.hidden = false; out.className = `result ${ok === true ? "good" : ok === false ? "bad" : ""}`; out.textContent = m; };
   try {
     const [r, j] = await api("api/network", { method: "POST", body: JSON.stringify(body) });
-    if (j.state) { NET = j.state; renderNetwork(); }
+    if (j.state) { NET = j.state; renderNetwork(); loadBoxSettings(); }   // router card follows the network
     if (!r.ok || j.ok === false) { say(j.error || `Failed (HTTP ${r.status})`, false); return null; }
     if (j.pending) { say(j.error, null); return null; }
     return j;
@@ -835,7 +835,9 @@ function renderNetwork() {
   if (!body || !NET) return;
   const n = NET.network;
   if (!n) {
-    body.innerHTML = `<p class="warning">The box isn't connected to a network right now (no router found). Plug in a network cable${NET.wifi ? ", or join a Wi-Fi network" : ""}.</p>
+    body.innerHTML = NET.online
+      ? `<p class="help">Working out which network this is. The box looks at the evidence when the connection changes, after a restart, and at least every 10 minutes.</p>`
+      : `<p class="warning">The box isn't connected to a network right now (no router found). Plug in a network cable${NET.wifi ? ", or join a Wi-Fi network" : ""}.</p>
       ${NET.wifi ? `<button id="ap-wifi" class="ghost">Join Wi-Fi…</button>` : ""}`;
     $("#ap-wifi")?.addEventListener("click", openWifi);
     return;
@@ -844,8 +846,18 @@ function renderNetwork() {
   const others = NET.networks.filter((x) => x.id !== n.id);
   const fresh = n.setup === "starter";
   const when = (t) => (t ? new Date(t * 1000).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "?");
+  const m = n.match || {}, cand = n.candidate;
+  const list = (a) => (a || []).map(esc).join("; ");
+  const how = m.how === "recognised" || m.how === "confirmed"
+    ? `<li>${m.how === "confirmed" ? "<b>Confirmed</b> by an administrator" : `<b>Recognised</b> from the evidence: ${list(m.reasons)}`}${m.against?.length ? ` <span class="help">(though: ${list(m.against)})</span>` : ""}
+         <button class="ghost small" id="ap-split">Not this network?</button></li>`
+    : `<li><b>New network:</b> it didn't match any network this box knows${m.closest && m.closest.score > 0 ? ` <span class="help">(closest: ${esc(m.closest.name)}, ${list(m.closest.reasons)}${m.closest.against?.length ? `; against: ${list(m.closest.against)}` : ""})</span>` : ""}</li>`;
   body.innerHTML = `
-    ${fresh ? `<div class="setup invite"><div><b>${n.visits > 1 ? "This network has only the starter list" : "New network"}</b><br>
+    ${cand ? `<div class="setup problem"><div><b>Is this ${esc(cand.name)}?</b><br>
+      <span class="help">Some evidence matches (${list(cand.reasons)})${cand.against?.length ? `, some doesn't (${list(cand.against)})` : ""}, but not enough to be sure.
+      Until you answer it's treated as a new network: ${esc(cand.name)}'s devices and router login aren't used. The box keeps looking and decides by itself if the evidence becomes clear.</span></div>
+      <span class="net-actions"><button id="ap-yes">Yes, it's ${esc(cand.name)}</button><button id="ap-no" class="ghost">No, it's a different network</button></span></div>` : ""}
+    ${fresh && !cand ? `<div class="setup invite"><div><b>${n.visits > 1 ? "This network has only the starter list" : "New network"}</b><br>
       <span class="help">The box is watching the router, the internet and name lookups here. Choose the devices that matter on this network.</span></div>
       <button id="ap-dev-open2">Choose devices</button></div>` : ""}
     <form id="ap-net-name" class="inline">
@@ -855,6 +867,7 @@ function renderNetwork() {
     </form>
     <p id="ap-net-result" class="result" hidden></p>
     <ul class="facts">
+      ${how}
       <li>Connected by ${n.kind === "Wi-Fi" ? `<b>Wi-Fi</b>${n.ssid ? ` (${esc(n.ssid)})` : ""}` : "<b>cable</b>"} on ${esc(n.interface || "?")}: address ${esc(n.address || "?")}, network ${esc(n.subnet || "?")}, router ${esc(n.gateway || "?")}</li>
       <li>Here since ${esc(when(n.since))}${n.visits > 1 ? ` · visit ${n.visits}` : ""} · first seen ${esc(when(n.first_seen))}</li>
       <li>Find the box from any network at <a href="http://${esc(NET.hostname || "lanpulse")}.local:8080/">${esc(NET.hostname || "lanpulse")}.local:8080</a> <span class="help">(or ${esc(n.address || "")}:8080)</span></li>
@@ -862,6 +875,7 @@ function renderNetwork() {
     <div class="net-actions">
       <button id="ap-dev-open" class="${fresh ? "ghost" : ""}">Devices to watch (${here.monitors})</button>
       ${NET.wifi ? `<button id="ap-wifi" class="ghost">Join Wi-Fi…</button>` : ""}
+      <button id="ap-forget-here" class="ghost danger">Forget this network and start over</button>
     </div>
     ${others.length ? `<h4>Other networks this box knows</h4>
       <ul class="netlist">${others.map((o) => `<li><b>${esc(o.name)}</b> <span class="help">${esc(o.subnet || "")} · last there ${esc(when(o.last_seen))} · ${o.monitors} devices</span>
@@ -872,6 +886,31 @@ function renderNetwork() {
     const out = $("#ap-net-result");
     const j = await netRequest({ type: "rename", network: n.id, name: $("#ap-net-n").value }, out);
     if (j) { out.hidden = false; out.className = "result good"; out.textContent = `Renamed to ${j.name}.`; setTimeout(refresh, 3000); }
+  };
+  const out = $("#ap-net-result");
+  const busy = (b, text) => { out.hidden = false; out.className = "result"; out.textContent = text; b.disabled = true; };
+  $("#ap-yes")?.addEventListener("click", async (e) => {
+    busy(e.target, `Merging with ${cand.name}: Uptime Kuma restarts, about half a minute…`);
+    const j = await netRequest({ type: "confirm", candidate: cand.id }, out);
+    if (j) { out.className = "result good"; out.textContent = `This is ${j.network.name}: its devices, router login and history are back.`; setTimeout(refresh, 20_000); }
+  });
+  $("#ap-no")?.addEventListener("click", async (e) => {
+    busy(e.target, "Saving…");
+    if (await netRequest({ type: "reject", candidate: cand.id }, out)) { out.className = "result good"; out.textContent = `Kept as a separate network. It won't be confused with ${cand.name} again.`; }
+  });
+  $("#ap-split")?.addEventListener("click", async (e) => {
+    const b = e.target;
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = `Make this a new network, separate from ${n.name}? Click again`; return; }
+    busy(b, "Separating: Uptime Kuma restarts, about half a minute…");
+    const j = await netRequest({ type: "split" }, out);
+    if (j) { out.className = "result good"; out.textContent = `Now a separate new network (${j.network.name}) with a starter device list. ${n.name} is kept as it was.`; setTimeout(refresh, 20_000); }
+  });
+  $("#ap-forget-here").onclick = async (e) => {
+    const b = e.target;
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = `Delete ${n.name}'s ${here.monitors} devices, router login link and history, and start over? Click again`; return; }
+    busy(b, "Forgetting…");
+    const j = await netRequest({ type: "forget", network: n.id }, out);
+    if (j) { out.className = "result good"; out.textContent = "Forgotten. The box looks at the network afresh on its next check (within 10 minutes), when the connection changes, or after a restart."; }
   };
   $("#ap-dev-open").onclick = openDevices;
   $("#ap-dev-open2")?.addEventListener("click", openDevices);
