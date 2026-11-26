@@ -387,7 +387,7 @@ function renderSide(x) {
   }[mode] || ((a, b) => ip(a.ip) - ip(b.ip));
   live.sort(cmp);
   const sorts = [["auto", byUsage ? "New · busiest" : "New first"], ["name", "Name"], ["ip", "IP"], ["mac", "MAC"]];
-  const sortBar = KIOSK ? "" : `<div class="sd-sort" role="group" aria-label="Sort devices">Sort: ${sorts.map(([k, l]) =>
+  const sortBar = `<div class="sd-sort" role="group" aria-label="Sort devices">Sort: ${sorts.map(([k, l]) =>
     `<button type="button" data-sort="${k}" aria-pressed="${mode === k}">${l}</button>`).join("")}</div>`;
   const top = maxUsage(live);
   const nw = live.filter((d) => d.new).length;
