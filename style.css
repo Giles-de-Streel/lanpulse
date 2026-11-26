@@ -375,7 +375,14 @@ body.k-mini .sd-row { padding: .2rem 0; font-size: .85rem; }
   .side { position: static; max-height: 70vh; }
 }
 :root[data-theme="dark"] .sd-more { color: #7fd6cb; }
-.sd-list { padding-right: .6rem; }
+/* device list scrollbar on the left, dark blue, so it is not mistaken for the page scrollbar */
+.sd-list { direction: rtl; padding: 0 0 0 .7rem; scrollbar-color: #1e3a8a transparent; scrollbar-width: thin; }
+.sd-list > * { direction: ltr; }
+.sd-list::-webkit-scrollbar { width: 8px; }
+.sd-list::-webkit-scrollbar-thumb { background: #1e3a8a; border-radius: 4px; }
+.sd-list::-webkit-scrollbar-track { background: transparent; }
+:root[data-theme="dark"] .sd-list { scrollbar-color: #3b6fd8 transparent; }
+:root[data-theme="dark"] .sd-list::-webkit-scrollbar-thumb { background: #3b6fd8; }
 /* Light / Dark switch in the header */
 .theme-switch { padding: 0; margin: 0; min-width: 0; display: inline-flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; font-size: .85rem; }
 .theme-switch label { display: inline-flex; align-items: center; gap: .3rem; padding: .25rem .7rem; cursor: pointer; color: var(--muted); }
