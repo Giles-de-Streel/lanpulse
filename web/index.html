@@ -17,6 +17,9 @@
       if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       document.documentElement.dataset.theme = t;
     })();
+    // wall screen watchdog: if the dashboard script never got going (a broken update, a failed load),
+    // nothing else would ever reload the page, so try again every 90 s until it does
+    if (/[?&]kiosk/.test(location.search)) setInterval(function () { if (!window.lpBooted) location.reload(); }, 90000);
   </script>
 </head>
 <body>

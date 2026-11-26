@@ -206,6 +206,7 @@ function render(snap) {
   const sideShown = renderSide(snap.extras || {});
   renderQuick(sideShown ? quick.filter((i) => i.id !== "net-devices") : quick, snap.extras || {});
   renderClock(snap.extras || {});
+  window.lpBooted = true;          // tells the wall screen watchdog in index.html the page came up
   const site = snap.site || {};
   document.title = site.name || "lanpulse";
   $("#site-name").textContent = site.name || "Network status";
