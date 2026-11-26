@@ -210,13 +210,15 @@ def history(snap, log=print):
     except Exception as e:
         log(f"history: change log failed: {e}")
         changes = []
-    if time.time() - _cache["at"] > EVERY or _cache["data"] is None:
-        _cache["at"] = time.time()
+    # Refresh every EVERY seconds, or on every cycle while there's nothing yet (e.g. just after boot,
+    # when Uptime Kuma is still starting and the snapshot has no Kuma items).
+    if time.time() - _cache["at"] > EVERY or not _cache["data"]:
         try:
             items = [i for g in snap.get("groups", []) for i in g["items"]]
-            _cache["data"] = kuma_history(items) or {}
+            data = kuma_history(items)
+            if data:
+                _cache.update(at=time.time(), data=data)
         except Exception as e:
             log(f"history: kuma read failed: {e}")
-            _cache["data"] = _cache["data"] or {}
     cutoff = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    return {**_cache["data"], "changes": [c for c in changes if c["t"] >= cutoff][-MAX_EVENTS:]}
+    return {**(_cache["data"] or {}), "changes": [c for c in changes if c["t"] >= cutoff][-MAX_EVENTS:]}
