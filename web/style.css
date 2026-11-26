@@ -402,8 +402,9 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 .chip.bad { background: var(--down-bg); border-color: var(--down); }
 .tile .more-btn { margin-left: 0; display: inline-block; }
 
-/* groups of 3+ boxes stretch them to fill the row (no empty slot), still at most 4 per row */
-.tiles.fill { grid-template-columns: repeat(auto-fit, minmax(max(280px, calc((100% - 2.2rem) / 4)), 1fr)); }
-body.kiosk .tiles.fill { grid-template-columns: repeat(auto-fit, minmax(max(300px, calc((100% - 2.2rem) / 4)), 1fr)); }
-body.k-compact .tiles.fill { grid-template-columns: repeat(auto-fit, minmax(max(240px, calc((100% - 1.45rem) / 4)), 1fr)); }
-body.k-mini .tiles.fill { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+/* a group of exactly 3 boxes uses 3 equal columns when there's room, instead of leaving an empty 4th slot
+   (larger groups already fill 4 per row). Container query rather than auto-fit: Firefox and Chrome agree on it. */
+#groups { container-type: inline-size; }
+@container (min-width: 930px) {
+  body:not(.k-mini) .tiles.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
