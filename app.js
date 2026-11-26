@@ -324,6 +324,19 @@ const yes = (b) => (b ? "✓" : "");
 const KIOSK_PAGE_MS = 15_000;
 const kioskState = { page: 0, timer: null, pages: [] };
 
+// Per-device traffic, where the router reports it. UniFi: live bits per second each way. ASUS: only how
+// fast its running totals grew since the last poll, in unknown units, so it's shown as a share of the busiest.
+const usageVal = (d) => (d.usage ? (d.usage.rate_bps ?? d.usage.rate ?? 0) : null);
+const maxUsage = (list) => Math.max(0, ...list.map((d) => usageVal(d) || 0));
+const fmtBps = (b) => (b >= 1e6 ? `${(b / 1e6).toFixed(b >= 1e7 ? 0 : 1)} Mbps` : b >= 1e3 ? `${Math.round(b / 1e3)} kbps` : `${Math.round(b)} bps`);
+function usageHtml(u, top) {
+  if (!u) return "";
+  const v = u.rate_bps ?? u.rate ?? 0, w = top ? Math.max(2, Math.round((100 * v) / top)) : 0;
+  const text = u.rate_bps != null ? (u.rate_bps < 1000 ? "idle" : `↓ ${fmtBps(u.down_bps)} · ↑ ${fmtBps(u.up_bps)}`)
+    : v ? `${Math.round((100 * v) / (top || v))}% of the busiest` : "idle";
+  return `<span class="ubar" title="${esc(u.basis || "")}"><i style="width:${v ? w : 0}%"></i></span> <span class="utext">${esc(text)}</span>`;
+}
+
 // Devices column (right of the tiles): only devices online now, new ones first, then by address.
 // Offline devices stay on the full devices page.
 function renderSide(x) {
@@ -333,15 +346,18 @@ function renderSide(x) {
   side.hidden = !all.length;
   if (!all.length) return false;
   const ip = (s) => (s || "").split(".").reduce((a, n) => a * 256 + (+n || 0), 0);
-  const live = all.filter((d) => d.online)
-    .sort((a, b) => ((b.new ? 1 : 0) - (a.new ? 1 : 0)) || (ip(a.ip) - ip(b.ip)));
+  const live = all.filter((d) => d.online);
+  const byUsage = live.some((d) => d.usage);     // the router reports traffic (UniFi, ASUS): busiest first
+  live.sort((a, b) => ((b.new ? 1 : 0) - (a.new ? 1 : 0))
+    || (byUsage ? (usageVal(b) ?? -1) - (usageVal(a) ?? -1) : 0) || (ip(a.ip) - ip(b.ip)));
+  const top = maxUsage(live);
   const nw = live.filter((d) => d.new).length;
   const href = viewHref("devices"), tgt = KIOSK ? "" : ` target="_blank" rel="noopener"`;
-  side.innerHTML = `<h2><a href="${href}"${tgt}>Devices</a><span class="help">${live.length} online now${nw ? ` · ${nw} new` : ""}</span></h2>
+  side.innerHTML = `<h2><a href="${href}"${tgt}>Devices</a><span class="help">${live.length} online now${nw ? ` · ${nw} new` : ""}${byUsage ? " · busiest first" : ""}</span></h2>
     <ul class="sd-list">${live.length ? "" : `<li class="help">No devices online right now</li>`}${live.map((d) => `<li class="sd-row${d.online ? "" : " off"}" title="${esc([d.vendor, d.mac].filter(Boolean).join(" · "))}">
       <span class="sdot ${d.online ? "up" : ""}"></span>
       <span class="sd-name">${esc(d.name || d.vendor || "(no name)")}${d.new ? ` <span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</span>
-      <span class="sd-ip">${esc(d.ip || "")}</span>${d.link ? `<span class="sd-link">${linkText(d.link)}</span>` : ""}</li>`).join("")}</ul>
+      <span class="sd-ip">${esc(d.ip || "")}</span>${d.link ? `<span class="sd-link">${linkText(d.link)}</span>` : ""}${byUsage ? `<span class="sd-use">${usageHtml(d.usage, top)}</span>` : ""}</li>`).join("")}</ul>
     <a class="sd-more" href="${href}"${tgt}>All devices, including offline ↗</a>`;
   return true;
 }
@@ -1193,7 +1209,7 @@ function mergedDevices(x) {
     const d = out.get(k) || byIp || {};
     if (byIp && !out.get(k)) out.delete((byIp.mac || byIp.ip || "").toUpperCase());
     out.set((d.mac || k).toUpperCase(), { ...d, mac: d.mac || c.mac, ip: d.ip || c.ip, name: d.name || c.name,
-      online: d.online ?? c.online, link: c.link });
+      online: d.online ?? c.online, link: c.link, usage: c.usage || d.usage });
   }
   return [...out.values()];
 }
@@ -1295,13 +1311,16 @@ function viewDevices(x) {
   sortable([
     ["state", "", (d) => (d.online ? 0 : 1)], ["name", "Name", (d) => d.name || ""], ["vendor", "Maker", (d) => d.vendor || ""],
     ["ip", "IP address", (d) => ipNum(d.ip)], ["mac", "MAC", (d) => d.mac || ""], ["conn", "Connection", (d) => d.link?.type || ""],
-    ["rssi", "Signal", (d) => d.link?.rssi ?? null], ["first", "First seen", (d) => tsOf(d.first_seen)], ["last", "Last seen", (d) => tsOf(d.last_seen)],
+    ["rssi", "Signal", (d) => d.link?.rssi ?? null],
+    ...(rows.some((d) => d.usage) ? [["usage", "Usage", (d) => usageVal(d)]] : []),
+    ["first", "First seen", (d) => tsOf(d.first_seen)], ["last", "Last seen", (d) => tsOf(d.last_seen)],
   ], rows, (d) => `<tr class="${d.online ? "" : "off"}">
       <td><span class="sdot ${d.online ? "up" : ""}" title="${d.online ? "online" : "offline"}"></span></td>
       <td>${esc(d.name || "") || `<span class="help">(no name)</span>`} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</td>
       <td>${esc(d.vendor || "")}${d.random_mac ? ` <span class="help" title="Phones and laptops often use a changing private address">private MAC</span>` : ""}</td>
       <td>${esc(d.ip || "")}</td><td class="mono">${esc(d.mac || "")}</td><td>${conn(d)}</td>
       <td>${d.link?.rssi != null ? `<span class="${d.link.rssi < weakAt ? "weak" : ""}">${Math.round(d.link.rssi)} dBm</span>` : ""}</td>
+      ${rows.some((r) => r.usage) ? `<td>${usageHtml(d.usage, maxUsage(rows))}</td>` : ""}
       <td>${esc(d.first_seen ? ago(d.first_seen) : "")}</td><td>${esc(d.last_seen ? ago(d.last_seen) : "")}</td></tr>`);
 }
 

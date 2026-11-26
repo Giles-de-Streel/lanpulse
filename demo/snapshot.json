@@ -3980,6 +3980,12 @@
      "type": "wired",
      "node": "Office switch",
      "rate_mbps": 1000
+    },
+    "usage": {
+     "down_bps": 600000,
+     "up_bps": 150000,
+     "rate_bps": 750000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -3991,6 +3997,12 @@
      "type": "wired",
      "node": "Office switch",
      "rate_mbps": 1000
+    },
+    "usage": {
+     "down_bps": 1200000,
+     "up_bps": 2700000,
+     "rate_bps": 3900000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4013,6 +4025,12 @@
      "type": "wired",
      "node": "Office switch",
      "rate_mbps": 1000
+    },
+    "usage": {
+     "down_bps": 400000,
+     "up_bps": 6200000,
+     "rate_bps": 6600000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4035,6 +4053,12 @@
      "type": "wired",
      "node": "Office switch",
      "rate_mbps": 100
+    },
+    "usage": {
+     "down_bps": 90000,
+     "up_bps": 90000,
+     "rate_bps": 180000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4048,6 +4072,12 @@
      "node": "Main router",
      "rssi": -48,
      "rate_mbps": 1201
+    },
+    "usage": {
+     "down_bps": 3800000,
+     "up_bps": 900000,
+     "rate_bps": 4700000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4061,6 +4091,12 @@
      "node": "Access point: Kitchen",
      "rssi": -52,
      "rate_mbps": 2402
+    },
+    "usage": {
+     "down_bps": 200000,
+     "up_bps": 50000,
+     "rate_bps": 250000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4074,6 +4110,12 @@
      "node": "Main router",
      "rssi": -57,
      "rate_mbps": 866
+    },
+    "usage": {
+     "down_bps": 80000,
+     "up_bps": 10000,
+     "rate_bps": 90000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4087,6 +4129,12 @@
      "node": "Access point: Kitchen",
      "rssi": -55,
      "rate_mbps": 433
+    },
+    "usage": {
+     "down_bps": 18400000,
+     "up_bps": 600000,
+     "rate_bps": 19000000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4100,6 +4148,12 @@
      "node": "Mesh point: Hall",
      "rssi": -63,
      "rate_mbps": 72
+    },
+    "usage": {
+     "down_bps": 50000,
+     "up_bps": 1900000,
+     "rate_bps": 1950000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4113,6 +4167,12 @@
      "node": "Mesh point: Classroom wing",
      "rssi": -81,
      "rate_mbps": 26
+    },
+    "usage": {
+     "down_bps": 40000,
+     "up_bps": 1600000,
+     "rate_bps": 1640000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4126,6 +4186,12 @@
      "node": "Mesh point: Hall",
      "rssi": -66,
      "rate_mbps": 65
+    },
+    "usage": {
+     "down_bps": 400,
+     "up_bps": 300,
+     "rate_bps": 700,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4165,6 +4231,12 @@
      "node": "Mesh point: Hall",
      "rssi": -61,
      "rate_mbps": 573
+    },
+    "usage": {
+     "down_bps": 1100000,
+     "up_bps": 200000,
+     "rate_bps": 1300000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4217,6 +4289,12 @@
      "node": "Mesh point: Classroom wing",
      "rssi": -86,
      "rate_mbps": 6
+    },
+    "usage": {
+     "down_bps": 200,
+     "up_bps": 100,
+     "rate_bps": 300,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4230,6 +4308,12 @@
      "node": "Mesh point: Hall",
      "rssi": -59,
      "rate_mbps": 600
+    },
+    "usage": {
+     "down_bps": 700000,
+     "up_bps": 100000,
+     "rate_bps": 800000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4243,6 +4327,12 @@
      "node": "Main router",
      "rssi": -62,
      "rate_mbps": 72
+    },
+    "usage": {
+     "down_bps": 120000,
+     "up_bps": 20000,
+     "rate_bps": 140000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4256,6 +4346,12 @@
      "node": "Access point: Kitchen",
      "rssi": -50,
      "rate_mbps": 1921
+    },
+    "usage": {
+     "down_bps": 9100000,
+     "up_bps": 1300000,
+     "rate_bps": 10400000,
+     "basis": "live, from UniFi"
     }
    },
    {
@@ -4269,6 +4365,12 @@
      "node": "Mesh point: Classroom wing",
      "rssi": -72,
      "rate_mbps": 270
+    },
+    "usage": {
+     "down_bps": 300000,
+     "up_bps": 50000,
+     "rate_bps": 350000,
+     "basis": "live, from UniFi"
     }
    },
    {
