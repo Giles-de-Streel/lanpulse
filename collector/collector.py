@@ -819,8 +819,9 @@ class SettingsAPI(BaseHTTPRequestHandler):
         return {"admin_set": bool(load_settings().get("admin")), "signed_in": self._signed_in()}
 
     def _info(self):
-        gw = gateway_ip() or "192.168.1.1"
-        types = [{"id": k, **{**v, "url": v["url"].format(gw=gw)}} for k, v in ROUTER_INFO.items()]
+        # pre-fills the router address; no guess when the gateway isn't known
+        gw = gateway_ip() or (current_network() or {}).get("gateway") or ""
+        types = [{"id": k, **{**v, "url": v["url"].format(gw=gw) if gw else ""}} for k, v in ROUTER_INFO.items()]
         try:
             from history import ntfy_targets
             alerts = ntfy_targets()

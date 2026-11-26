@@ -161,15 +161,26 @@ echo "30 3 * * * root $APP/scripts/backup.sh >/dev/null 2>&1" > /etc/cron.d/moni
 echo "== done"
 docker ps --format '{{.Names}}  {{.Status}}'
 echo
-IP=$(ip -4 -o addr show scope global 2>/dev/null | grep -v -E ' (docker|br-|veth)' | awk '{print $4}' | cut -d/ -f1 | head -1)
 systemctl start lanpulse-network.service || true   # detect the current network now
+# every address the box has (cable and Wi-Fi can both be connected); the main one (default route) first
+MAIN=$(ip -4 route show default 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="src"){print $(i+1); exit}}')
+ADDRS=$(ip -4 -o addr show scope global 2>/dev/null | grep -v -E ' (docker|br-|veth)' \
+  | awk -v m="$MAIN" '{split($4,a,"/"); k=(a[1]==m)?"main":""; print k" "a[1]" ("$2")"}' | sort -r)
+IP=${MAIN:-$(echo "$ADDRS" | awk 'NR==1{print $2}')}
+KUMA_USERS=$(python3 -c "import sqlite3;print(sqlite3.connect('file:$APP/uptime-kuma/kuma.db?mode=ro',uri=True).execute('select count(*) from user').fetchone()[0])" 2>/dev/null || echo 0)
+echo "Dashboard:  http://$(hostname).local:8080   (works on any network)"
+echo "$ADDRS" | while read -r k a i; do [ -n "$a" ] && echo "            http://$a:8080   $i${k:+, $k connection}"; done
+echo
+if [ "$KUMA_USERS" = "0" ]; then
 cat <<EOF
 Next:
   1. open http://$IP:3001 and create the Uptime Kuma admin account
-  2. sudo $APP/scripts/kuma-apply.sh <site>.csv            # load monitors
-  3. sudo $APP/scripts/kuma-statuspage.sh "Site name"      # feeds the lanpulse dashboard
-  4. dashboard: http://$IP:8080  (or http://$(hostname).local:8080 from any network)
-     optional wall screen: sudo $APP/scripts/kiosk-setup.sh
+  2. open the dashboard, sign in as administrator (you choose the password the first time) and use
+     "This network" > "Devices to watch" to add devices. (Or: sudo $APP/scripts/kuma-apply.sh <site>.csv)
+  optional wall screen: sudo $APP/scripts/kiosk-setup.sh
+EOF
+fi
+cat <<EOF
 Moving the box to another network: just plug it in (or join Wi-Fi from the admin view). It notices,
 switches to that network's device list (a starter list the first time) and keeps each network's
 history and settings apart. See docs/moving-networks.md.
