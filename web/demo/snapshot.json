@@ -4302,6 +4302,47 @@
    "6 GHz": 2,
    "2.4 GHz": 8
   },
+  "time": {
+   "at": "2026-01-01T11:56:00+00:00",
+   "box_offset_ms": -2.1,
+   "servers": [
+    {
+     "host": "time.cloudflare.com",
+     "ok": true,
+     "offset_ms": -1.8,
+     "rtt_ms": 14.2,
+     "stratum": 3
+    },
+    {
+     "host": "time.google.com",
+     "ok": true,
+     "offset_ms": -2.1,
+     "rtt_ms": 18.9,
+     "stratum": 1
+    },
+    {
+     "host": "pool.ntp.org",
+     "ok": true,
+     "offset_ms": 0.9,
+     "rtt_ms": 41.5,
+     "stratum": 2
+    },
+    {
+     "host": "time.nist.gov",
+     "ok": true,
+     "offset_ms": -2.6,
+     "rtt_ms": 33.0,
+     "stratum": 1
+    },
+    {
+     "host": "time.windows.com",
+     "ok": true,
+     "offset_ms": -6.3,
+     "rtt_ms": 47.7,
+     "stratum": 4
+    }
+   ]
+  },
   "history": {
    "from": "2025-11-17T12:00:00+00:00",
    "monitors": [

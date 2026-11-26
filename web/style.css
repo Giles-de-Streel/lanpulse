@@ -320,3 +320,8 @@ body.kiosk .qbtn { font-size: .95rem; padding: .45rem 1rem; }
 .cntp span[title] { cursor: help; }
 @media (max-width: 900px) { .clock { margin-left: 0; text-align: left; flex-basis: 100%; } }
 body.k-mini .cntp { display: none; }
+/* clock sits on the right of the status banner */
+.banner .clock { margin-left: auto; align-self: center; padding-left: 1rem; }
+.banner .ctime b { font-size: 1.5rem; }
+@media (max-width: 900px) { .banner { flex-wrap: wrap; } .banner .clock { padding-left: 0; } }
+body.k-mini .banner .csync { display: none; }
