@@ -423,3 +423,9 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 .sd-sort button { font: inherit; padding: .12rem .55rem; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text); cursor: pointer; }
 .sd-sort button:hover { background: var(--line); }
 .sd-sort button[aria-pressed="true"] { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }
+/* devices table: fits the page width instead of scrolling sideways */
+.view-table td.dt-name, .view-table td.dt-wrap { white-space: normal; }
+.view-table td.dt-name { min-width: 14rem; }
+.dt-sub { color: var(--muted); font-size: .78rem; margin-top: .1rem; white-space: normal; }
+.dt-addr .dt-sub { font-size: .74rem; white-space: nowrap; }
+.dt-seen .dt-sub { white-space: nowrap; }
