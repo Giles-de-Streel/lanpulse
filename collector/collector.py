@@ -637,6 +637,10 @@ PUBLISHERS = {"file": publish_file, "http": publish_http_put, "gist": publish_gi
 
 # ---------------------------------------------------------------------------- main
 
+_last_good = {}      # source name -> (time, part): bridges short outages such as Uptime Kuma restarting
+STALE_OK = 300
+
+
 def build_snapshot():
     snap = {"schema": SCHEMA, "generated": now_iso(), "sources": [], "site": {},
             "groups": [], "extras": {}}
@@ -645,8 +649,19 @@ def build_snapshot():
         if not name:
             continue
         try:
-            part = SOURCES[name]()
-            snap["sources"].append({"name": name, "ok": True})
+            try:
+                part = SOURCES[name]()
+                _last_good[name] = (time.time(), part)
+                snap["sources"].append({"name": name, "ok": True})
+            except Exception as e:
+                t, last = _last_good.get(name, (0, None))
+                if last is None or time.time() - t > STALE_OK:
+                    raise
+                # keep showing the last result for a few minutes (Uptime Kuma restarts when a device
+                # list changes) instead of tiles disappearing and coming back
+                part = last
+                snap["sources"].append({"name": name, "ok": True, "stale_s": int(time.time() - t)})
+                log(f"source {name} failed, showing its result from {int(time.time() - t)} s ago: {e}")
             for k, v in (part.get("site") or {}).items():
                 snap["site"].setdefault(k, v)
             for g in part.get("groups", []):           # sources can add to the same group
@@ -797,6 +812,33 @@ def gateway_ip():
         return json.load(open(os.path.join(os.environ.get("PUBLISH_FILE_DIR", "/data"), "netcheck.json"))).get("gateway")
     except (OSError, ValueError):
         return None
+
+
+def router_error(e, cfg):
+    """A router login failure in plain words, and which field in the prompt to look at."""
+    text = str(e)
+    low = text.lower()
+    if isinstance(e, urllib.error.HTTPError):
+        if e.code in (401, 403):
+            return ("Wrong username or password: the router refused the login. Check the password "
+                    "(it's the router's admin password, not the Wi-Fi password)."), "password"
+        if e.code == 429:
+            return "The router has paused logins after too many tries. Wait a few minutes and try again.", "password"
+        if e.code == 404:
+            return ("The router answered, but not like this router type would. Check the router type "
+                    "and address."), "type"
+        return f"The router answered with an error (HTTP {e.code}). Try again in a minute.", None
+    if any(w in low for w in ("password", "credential", "unauthori", "login fail", "invalid user", "auth")):
+        return "Wrong username or password: the router refused the login.", "password"
+    if "timed out" in low or "timeout" in low:
+        return f"No answer from {cfg['url']}. Check the address, and that the box is on the router's network.", "url"
+    if "refused" in low:
+        return f"Nothing is answering at {cfg['url']}. Check the address (http or https?).", "url"
+    if "name or service" in low or "nodename" in low or "getaddrinfo" in low:
+        return f"Couldn't find {cfg['url']}. Use the router's IP address.", "url"
+    if "ssl" in low or "certificate" in low:
+        return f"Secure connection to {cfg['url']} failed. Try http:// instead of https:// (or the other way).", "url"
+    return f"Couldn't sign in to the router: {text[:200]}", None
 
 
 _detect_cache = {}
@@ -1045,11 +1087,9 @@ class SettingsAPI(BaseHTTPRequestHandler):
         _last_test["t"] = time.time()
         try:
             data = fetch_router(cfg)
-        except urllib.error.HTTPError as e:
-            msg = "the router refused the login (check the password)" if e.code in (401, 403) else f"router answered HTTP {e.code}"
-            return self._send(200, {"ok": False, "error": f"Couldn't connect: {msg}"})
         except Exception as e:
-            return self._send(200, {"ok": False, "error": f"Couldn't connect: {str(e)[:200]}"})
+            msg, field = router_error(e, cfg)
+            return self._send(200, {"ok": False, "error": msg, "field": field})
         bands = {}
         for c in data["clients"]:
             k = "wired" if c["link"]["type"] == "wired" else (f"{c['link']['band']} GHz" if c['link'].get('band') else "Wi-Fi (band not reported)")

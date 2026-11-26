@@ -802,6 +802,10 @@ function openRouterDialog() {
   link();
   $("#r-remove").onclick = () => routerAction("remove");
   d.showModal();
+  for (const id of ["r-type", "r-url", "r-user", "r-pass"]) {
+    const f = $(`#${id}`); f.classList.remove("invalid");
+    f.addEventListener("input", () => f.classList.remove("invalid"));
+  }
   (sel.value ? $("#r-pass") : sel).focus();
 }
 
@@ -830,7 +834,7 @@ async function routerAction(action) {
   try {
     const r = await fetch("api/router", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const j = await r.json();
-    if (!r.ok || j.ok === false) { show(j.error || `Failed (HTTP ${r.status})`, false); return; }
+    if (!r.ok || j.ok === false) { show(j.error || `Failed (HTTP ${r.status})`, false, j.field); return; }
     if (action === "remove") { show("Disconnected. The saved login was removed.", true); }
     else {
       const bands = Object.entries(j.client_bands || {}).map(([k, v]) => `${v} ${k}`).join(", ");
@@ -845,7 +849,12 @@ async function routerAction(action) {
   } finally {
     for (const b of $("#router-form").querySelectorAll("button")) b.disabled = false;
   }
-  function show(msg, ok) { out.hidden = false; out.textContent = msg; out.className = `result ${ok === true ? "good" : ok === false ? "bad" : ""}`; }
+  function show(msg, ok, field) {
+    out.hidden = false; out.textContent = msg; out.className = `result ${ok === true ? "good" : ok === false ? "bad" : ""}`;
+    for (const id of ["r-type", "r-url", "r-user", "r-pass"]) $(`#${id}`).classList.remove("invalid");
+    const el = { password: "#r-pass", url: "#r-url", type: "#r-type", user: "#r-user" }[field];
+    if (el) { $(el).classList.add("invalid"); if (field === "password") $("#r-user").classList.add("invalid"); $(el).focus(); $(el).select?.(); }
+  }
 }
 
 // ---------------------------------------------------------------- this network (admin view)

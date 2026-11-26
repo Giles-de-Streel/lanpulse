@@ -344,3 +344,4 @@ dialog.wide { width: min(900px, 96vw); }
 #net-info { font-size: .8rem; }
 
 .tile-action { margin-top: .45rem; }
+input.invalid, select.invalid { border-color: var(--down) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--down) 18%, transparent); }

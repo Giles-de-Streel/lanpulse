@@ -1142,7 +1142,12 @@ def handle(req):
             nets.pop("legacy_id")
         save(nets)
         publish(nets, True)
-        return {"ok": True, "current_forgotten": nets.get("current") is None}
+        if nets.get("current") is None:
+            # start over straight away instead of at the next 10-minute check
+            log("current network forgotten: looking at the network afresh")
+            _ensure(False)
+            return {"ok": True, "current_forgotten": True, "network": {"id": load().get("current")}}
+        return {"ok": True, "current_forgotten": False}
     if kind == "confirm":                      # "Yes, this is <candidate>"
         cur, cand = nets.get("current"), req.get("candidate")
         if cur not in nets["networks"] or cand not in nets["networks"] or cand == cur:
@@ -1223,6 +1228,8 @@ def process_requests():
         try:
             with open(os.path.join(CONF, ".netswitch.lock"), "w") as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)   # never at the same time as a network switch
+                if isinstance(req, dict):
+                    log(f"dashboard request: {req.get('type')}")     # never the request itself (Wi-Fi passwords)
                 res = handle(req) if isinstance(req, dict) else {"ok": False, "error": "bad request"}
         except Exception as e:
             log(f"request {f} failed: {e}")
