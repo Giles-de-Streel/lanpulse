@@ -1,5 +1,5 @@
 // Offline shell: app files are cached, status data is always fetched live.
-const CACHE = "lanpulse-v24";
+const CACHE = "lanpulse-v25";
 const SHELL = ["./", "index.html", "app.js", "providers.js", "style.css", "icon.svg", "manifest.webmanifest"];
 
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())));
