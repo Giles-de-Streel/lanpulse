@@ -67,8 +67,8 @@ function recount(groups) {
   return s;
 }
 
-// ---------------------------------------------------------------- clock (right of the quick links)
-// Shows this PC's own date and time, ticking, and whether it agrees with internet time.
+// ---------------------------------------------------------------- clock (in the status banner)
+// In the status banner, on the right. // Shows this PC's own date and time, ticking, and whether it agrees with internet time.
 // Browsers can't use NTP (UDP), so the box queries public NTP servers (extras.time) and the page
 // compares the PC with the box using the server's Date header (1-second resolution, so differences
 // under ~2 s count as "matches").
@@ -83,13 +83,13 @@ async function measurePcOffset() {
   } catch { /* offline: just show the PC clock */ }
 }
 function renderClock(x) {
-  let el = CLOCK.el;   // one element and one timer, re-attached after the quick links are rebuilt
+  let el = CLOCK.el;   // one element and one timer
   if (!el) {
     el = CLOCK.el = document.createElement("div");
     el.id = "clock";
     el.className = "clock";
     el.innerHTML = `<div class="ctime"><b id="c-time"></b><span id="c-date"></span></div><div id="c-sync" class="csync"></div><div id="c-ntp" class="cntp"></div>`;
-    $("#quick").append(el);
+    $("#banner").append(el);
     const tick = () => {
       const n = new Date();
       el.querySelector("#c-time").textContent = n.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" });
@@ -98,7 +98,7 @@ function renderClock(x) {
     tick();
     CLOCK.timer = setInterval(tick, 1000);
   }
-  if (el.parentElement !== $("#quick")) $("#quick").append(el);
+  if (el.parentElement !== $("#banner")) $("#banner").append(el);
   const t = x.time;
   measurePcOffset().then(() => {
     const sync = $("#c-sync");
@@ -147,7 +147,7 @@ function renderQuick(items, x) {
     el.insertAdjacentHTML("beforeend", `<a class="qbtn" href="${viewHref("history")}"${KIOSK ? "" : ` target="_blank" rel="noopener"`}>
       <b>History</b><span>${n ? `${n} outage${n === 1 ? "" : "s"} in 24 h` : "no outages in 24 h"}</span><i aria-hidden="true">↗</i></a>`);
   }
-  renderClock(x);
+
   el.hidden = !el.children.length;
 }
 
@@ -163,6 +163,7 @@ function render(snap) {
   }) })).filter((g) => g.items.length) };
   snap.summary = recount(snap.groups);
   renderQuick(quick, snap.extras || {});
+  renderClock(snap.extras || {});
   const site = snap.site || {};
   document.title = site.name || "lanpulse";
   $("#site-name").textContent = site.name || "Network status";
