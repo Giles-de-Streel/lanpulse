@@ -6,7 +6,7 @@ The snapshot is the single contract between data collection and display. The col
 {
   "schema": "lanpulse.snapshot/1",          // required, bump the number on breaking changes
   "generated": "2026-01-01T12:00:00+00:00", // required, ISO 8601. The dashboard flags data older than 3 min
-  "sources": [ { "name": "uptime-kuma", "ok": true } ],   // what fed this snapshot, and any errors
+  "sources": [ { "name": "uptime-kuma", "ok": true } ],   // what fed this snapshot, and any errors ("starting": true = not answering yet in the first 3 min after a restart)
   "site": { "name": "Example Center", "description": "Shown under the title" },
   "summary": { "total": 11, "up": 9, "down": 1, "pending": 1, "maintenance": 0, "unknown": 0 },
   "groups": [

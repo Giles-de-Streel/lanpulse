@@ -251,8 +251,11 @@ function render(snap) {
 
   const gen = snap.generated ? new Date(snap.generated) : null;
   const stale = !gen || Date.now() - gen.getTime() > STALE_MS;
-  const failed = (snap.sources || []).filter((s) => !s.ok);
-  $("#updated").textContent = gen ? `Updated ${ago(snap.generated)}` : "";
+  // sources still starting after a reboot (collector sets "starting" for its first 3 minutes) aren't faults
+  const failed = (snap.sources || []).filter((s) => !s.ok && !s.starting);
+  const starting = (snap.sources || []).some((s) => !s.ok && s.starting);
+  $("#updated").dataset.s = starting ? " · starting up" : "";
+  $("#updated").textContent = gen ? `Updated ${ago(snap.generated)}${$("#updated").dataset.s}` : "";
   $("#updated").dataset.t = snap.generated || "";
   $("#updated").className = stale ? "stale" : "";
   $("#warning").hidden = !(stale || failed.length);
@@ -506,7 +509,7 @@ if (KIOSK) document.body.classList.add("kiosk");
 $("#open-settings").addEventListener("click", openSettings);
 refresh();
 setInterval(refresh, REFRESH_MS);
-setInterval(() => { const u = $("#updated"); if (u.dataset.t) u.textContent = `Updated ${ago(u.dataset.t)}`; }, 15_000);
+setInterval(() => { const u = $("#updated"); if (u.dataset.t) u.textContent = `Updated ${ago(u.dataset.t)}${u.dataset.s || ""}`; }, 15_000);
 if ("serviceWorker" in navigator && !KIOSK) navigator.serviceWorker.register("sw.js").catch(() => {});
 
 // ---------------------------------------------------------------- router setup (box only)

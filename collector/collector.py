@@ -639,6 +639,8 @@ PUBLISHERS = {"file": publish_file, "http": publish_http_put, "gist": publish_gi
 
 _last_good = {}      # source name -> (time, part): bridges short outages such as Uptime Kuma restarting
 STALE_OK = 300
+STARTED = time.time()
+STARTUP_GRACE = 180  # after a reboot or restart, sources (Uptime Kuma) take a minute to answer: not a fault yet
 
 
 def build_snapshot():
@@ -672,8 +674,11 @@ def build_snapshot():
                     snap["groups"].append(g)
             snap["extras"].update(part.get("extras", {}))
         except Exception as e:
-            snap["sources"].append({"name": name, "ok": False, "error": str(e)[:200]})
-            log(f"source {name} failed: {e}")
+            src = {"name": name, "ok": False, "error": str(e)[:200]}
+            if time.time() - STARTED < STARTUP_GRACE:
+                src["starting"] = True                 # the dashboard doesn't warn about these
+            snap["sources"].append(src)
+            log(f"source {name} failed{' (still starting up)' if src.get('starting') else ''}: {e}")
     net = current_network()
     if net:
         snap["extras"]["network"] = {k: net.get(k) for k in
