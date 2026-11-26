@@ -1043,3 +1043,9 @@ function viewHistory(x) {
       ${newDevs.slice(0, 50).map((d) => `<tr><td>${esc(whenText(new Date(tsOf(d.first_seen)).toISOString()))}</td><td>${esc(d.name || "") || `<span class="help">(no name)</span>`}</td><td>${esc(d.vendor || "")}</td><td>${esc(d.ip || "")}</td></tr>`).join("")}
       </tbody></table></div>` : `<p class="help">No new devices in the last ${range}.</p>`}`;
 }
+
+// Cancel/Close buttons are plain buttons (so Enter in a field means Sign in / Save, not Cancel)
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-close]");
+  if (b) b.closest("dialog")?.close();
+});

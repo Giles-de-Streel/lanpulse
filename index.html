@@ -65,7 +65,7 @@
       <p id="si-result" class="result" hidden></p>
       <menu>
         <span class="spacer"></span>
-        <button value="cancel" class="ghost" formnovalidate id="si-cancel">Cancel</button>
+        <button type="button" class="ghost" data-close id="si-cancel">Cancel</button>
         <button type="submit" id="si-go" value="default">Sign in</button>
       </menu>
     </form>
@@ -81,7 +81,7 @@
       <div id="fields"></div>
       <p class="help">Settings are saved in this browser only. You can also use URL parameters: <code>?source=url&amp;url=…</code>, and <code>&amp;kiosk</code> for a wall screen.</p>
       <menu>
-        <button value="cancel" class="ghost">Cancel</button>
+        <button type="button" class="ghost" data-close>Cancel</button>
         <button value="save">Save</button>
       </menu>
     </form>
@@ -108,7 +108,7 @@
       <menu>
         <button type="button" id="r-remove" class="ghost danger" hidden>Disconnect</button>
         <span class="spacer"></span>
-        <button value="cancel" class="ghost" formnovalidate>Close</button>
+        <button type="button" class="ghost" data-close>Close</button>
         <button type="button" id="r-test" class="ghost">Test</button>
         <button type="button" id="r-save">Save and connect</button>
       </menu>
