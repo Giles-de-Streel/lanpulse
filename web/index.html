@@ -9,6 +9,15 @@
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0f766e">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // theme before first paint: ?theme=dark|light, else the saved choice, else the device's setting
+    (function () {
+      var q = new URLSearchParams(location.search).get("theme"), t;
+      try { t = q || localStorage.getItem("lp-theme"); } catch (e) { t = q; }
+      if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
 </head>
 <body>
   <header>
@@ -20,6 +29,10 @@
       </div>
     </div>
     <div class="right">
+      <fieldset id="theme-switch" class="theme-switch" aria-label="Colour theme">
+        <label><input type="radio" name="theme" value="light"> Light</label>
+        <label><input type="radio" name="theme" value="dark"> Dark</label>
+      </fieldset>
       <a id="admin-link" class="admin-link" href="./?admin&amp;from=kiosk" hidden>Admin sign-in</a>
       <span id="updated"></span>
       <span id="admin-bar" hidden></span>

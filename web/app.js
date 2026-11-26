@@ -287,7 +287,8 @@ const yes = (b) => (b ? "✓" : "");
 const KIOSK_PAGE_MS = 15_000;
 const kioskState = { page: 0, timer: null, pages: [] };
 
-// Devices column (right of the tiles): new first, then online, then by address; offline ones dimmed at the end
+// Devices column (right of the tiles): only devices online now, new ones first, then by address.
+// Offline devices stay on the full devices page.
 function renderSide(x) {
   const side = $("#side");
   const all = (x.devices || x.clients) ? mergedDevices(x) : [];
@@ -295,15 +296,16 @@ function renderSide(x) {
   side.hidden = !all.length;
   if (!all.length) return false;
   const ip = (s) => (s || "").split(".").reduce((a, n) => a * 256 + (+n || 0), 0);
-  all.sort((a, b) => ((b.new ? 1 : 0) - (a.new ? 1 : 0)) || ((b.online ? 1 : 0) - (a.online ? 1 : 0)) || (ip(a.ip) - ip(b.ip)));
-  const on = all.filter((d) => d.online).length, nw = all.filter((d) => d.new).length, off = all.length - on;
+  const live = all.filter((d) => d.online)
+    .sort((a, b) => ((b.new ? 1 : 0) - (a.new ? 1 : 0)) || (ip(a.ip) - ip(b.ip)));
+  const nw = live.filter((d) => d.new).length;
   const href = viewHref("devices"), tgt = KIOSK ? "" : ` target="_blank" rel="noopener"`;
-  side.innerHTML = `<h2><a href="${href}"${tgt}>Devices</a><span class="help">${on} online${nw ? ` · ${nw} new` : ""}${off ? ` · ${off} offline` : ""}</span></h2>
-    <ul class="sd-list">${all.map((d) => `<li class="sd-row${d.online ? "" : " off"}" title="${esc([d.vendor, d.mac].filter(Boolean).join(" · "))}">
+  side.innerHTML = `<h2><a href="${href}"${tgt}>Devices</a><span class="help">${live.length} online now${nw ? ` · ${nw} new` : ""}</span></h2>
+    <ul class="sd-list">${live.length ? "" : `<li class="help">No devices online right now</li>`}${live.map((d) => `<li class="sd-row${d.online ? "" : " off"}" title="${esc([d.vendor, d.mac].filter(Boolean).join(" · "))}">
       <span class="sdot ${d.online ? "up" : ""}"></span>
       <span class="sd-name">${esc(d.name || d.vendor || "(no name)")}${d.new ? ` <span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</span>
       <span class="sd-ip">${esc(d.ip || "")}</span>${d.link ? `<span class="sd-link">${linkText(d.link)}</span>` : ""}</li>`).join("")}</ul>
-    <a class="sd-more" href="${href}"${tgt}>See all details ↗</a>`;
+    <a class="sd-more" href="${href}"${tgt}>All devices, including offline ↗</a>`;
   return true;
 }
 
@@ -320,7 +322,7 @@ function sizeSide() {
   const lb = list.getBoundingClientRect().bottom;
   const cut = rows.filter((r) => r.getBoundingClientRect().bottom > lb + 1);
   cut.forEach((r) => (r.hidden = true));
-  more.textContent = cut.length ? `+${cut.length} more · see all ↗` : "See all details ↗";
+  more.textContent = cut.length ? `+${cut.length} more · see all ↗` : "All devices, including offline ↗";
 }
 
 function fitsScreen() {
@@ -551,6 +553,16 @@ $("#settings form").addEventListener("submit", (e) => {
 
 if (KIOSK) document.body.classList.add("kiosk");
 $("#open-settings").addEventListener("click", openSettings);
+
+// Light / Dark switch: remembered in this browser (the wall screen keeps its own choice)
+for (const r of document.querySelectorAll("#theme-switch input")) {
+  r.checked = r.value === document.documentElement.dataset.theme;
+  r.addEventListener("change", () => {
+    document.documentElement.dataset.theme = r.value;
+    try { localStorage.setItem("lp-theme", r.value); } catch { /* private mode */ }
+    if (KIOSK) requestAnimationFrame(fitKiosk);
+  });
+}
 refresh();
 setInterval(refresh, REFRESH_MS);
 setInterval(() => { const u = $("#updated"); if (u.dataset.t) u.textContent = `Updated ${ago(u.dataset.t)}${u.dataset.s || ""}`; }, 15_000);
