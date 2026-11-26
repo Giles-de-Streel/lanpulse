@@ -32,6 +32,7 @@ CUR=$(python3 -c "import json;print(json.load(open('$APP/config/networks.json'))
 [[ "$CUR" =~ ^[a-z0-9]{1,20}$ ]] || CUR=""
 TAGQ="(SELECT id FROM tag WHERE name='lanpulse-network')"
 OTHER="(SELECT monitor_id FROM monitor_tag WHERE tag_id=$TAGQ AND value<>'$CUR')"   # other networks' monitors
+BOXM="(SELECT monitor_id FROM monitor_tag WHERE tag_id=$TAGQ AND value='box')"   # the box's own checks (netswitch.py)
 lit() { [ -z "$1" ] && echo NULL || echo "'$(q "$1")'"; }
 
 SQL=$(mktemp); trap 'rm -f "$SQL"' EXIT
@@ -65,7 +66,7 @@ INSERT INTO monitor (name,type,user_id,hostname,url,port,dns_resolve_server,dns_
                      interval,retry_interval,maxretries,timeout,weight,parent,description)
   SELECT '$N','$type',$UID_SQL,$(lit "$host"),$(lit "$url"),${port:-NULL},$(lit "$dsrv"),$(lit "$dtype"),
          60,60,2,48,$w,$PARENT,$(lit "$desc")
-  WHERE NOT EXISTS (SELECT 1 FROM monitor WHERE name='$N' AND type<>'group' AND id NOT IN $OTHER);
+  WHERE NOT EXISTS (SELECT 1 FROM monitor WHERE name='$N' AND type<>'group' AND (id NOT IN $OTHER OR id IN $BOXM));
 EOF
   n=$((n+1)); NAMES="$NAMES,'$N'"
 done < "$CSV"

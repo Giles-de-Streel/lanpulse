@@ -40,7 +40,7 @@ points, NetAlertX's device list including the router's MAC) become a known netwo
 1. **Device discovery** (NetAlertX `SCAN_SUBNETS`) points at every subnet the box is on now (big networks capped to a /22).
 2. **Device list:** each network has its own list in Uptime Kuma (monitors tagged
    `lanpulse-network=<id>`). Other networks' monitors are **paused, not deleted**, so their history is kept.
-   A new network gets a starter list (router, internet, name lookups, and the box's own services).
+   A new network gets a starter list (router, internet, name lookups). The box's own services (dashboard, NetAlertX, Speedtest Tracker) are checked on every network: they're added by themselves, belong to the box rather than a network, and can't be removed or duplicated by a network's list.
 3. **Dashboard title** = the network's name.
 4. **Speed test straight away:** on arriving at a network (new or returning) the box runs a speed test
    instead of waiting up to 4 hours for the schedule, unless one already ran during this visit. A test uses

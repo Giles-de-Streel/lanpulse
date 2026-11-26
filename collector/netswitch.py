@@ -544,6 +544,8 @@ class Kuma:
             "SELECT m.id, m.name FROM monitor m JOIN monitor_tag mt ON mt.monitor_id=m.id "
             "WHERE mt.tag_id=? AND mt.value=? AND m.type<>'group'", (t, nid))}
         keep, w = set(), 1000
+        if nid != BOX:
+            rows = [r for r in rows if not (r["type"] == "http" and r["target"] in BOX_URLS)]
         for r in rows:
             w += 10
             host = url = port = dsrv = dtype = None
@@ -580,11 +582,32 @@ class Kuma:
         self.attach_notifications()
         self.tidy_groups()
 
+    def ensure_box(self):
+        """Make the box's own service checks exist once, owned by the box. Copies that were on a
+        network's list (made before this, or pasted in) become the box's; extra copies are removed."""
+        t = self.tag_id()
+        for url in BOX_URLS:
+            ids = [i for (i,) in self.q("SELECT id FROM monitor WHERE type='http' AND url=? ORDER BY "
+                                        "(SELECT count(*) FROM monitor_tag WHERE monitor_id=monitor.id AND tag_id=? AND value=?) DESC, id",
+                                        (url, t, BOX))]
+            if ids:
+                self.con.execute("DELETE FROM monitor_tag WHERE monitor_id=? AND tag_id=?", (ids[0], t))
+                self.con.execute("INSERT INTO monitor_tag (monitor_id, tag_id, value) VALUES (?, ?, ?)", (ids[0], t, BOX))
+                for extra in ids[1:]:
+                    self.con.execute("DELETE FROM monitor WHERE id=?", (extra,))
+        names = {r["name"]: r for r in BOX_ROWS}
+        for url, name in [(r["target"], r["name"]) for r in BOX_ROWS]:
+            # keep the name a person may have given it; set_rows matches by name
+            got = self.q("SELECT name FROM monitor WHERE type='http' AND url=?", (url,))
+            if got and got[0][0] != name:
+                names[got[0][0]] = dict(names.pop(name), name=got[0][0])
+        self.set_rows(BOX, list(names.values()), active=True)
+
     def activate(self, nid):
         """Run only network nid's monitors; pause every other network's (history kept)."""
         own = self.owners()
         for mid, typ in self.q("SELECT id, type FROM monitor WHERE type<>'group'"):
-            self.con.execute("UPDATE monitor SET active=? WHERE id=?", (int(own.get(mid) == nid), mid))
+            self.con.execute("UPDATE monitor SET active=? WHERE id=?", (int(own.get(mid) in (nid, BOX)), mid))
         self.tidy_groups()
 
     def tidy_groups(self):
@@ -620,14 +643,22 @@ def starter_rows(cur):
             {"group": "Network", "name": "Internet", "type": "ping", "target": "1.1.1.1",
              "description": "Reaching the internet (Cloudflare)"},
             {"group": "Network", "name": "Name lookups", "type": "dns", "target": f"example.com@{gw}",
-             "description": "The router answers DNS"},
-            # the box's own services: the same on every network
-            {"group": "Monitoring box", "name": "lanpulse dashboard", "type": "http", "target": "http://host.docker.internal:8080",
-             "description": "The dashboard on this box"},
-            {"group": "Monitoring box", "name": "NetAlertX (device finder)", "type": "http", "target": "http://host.docker.internal:20211",
-             "description": "Device finder on this box"},
-            {"group": "Monitoring box", "name": "Speedtest Tracker", "type": "http", "target": "http://host.docker.internal:8765",
-             "description": "Speed test history on this box"}]
+             "description": "The router answers DNS"}]
+
+
+# The box's own services. They belong to the box, not to a network (tag value "box"): added by
+# themselves, they run on every network, and network device lists can't remove or duplicate them.
+BOX = "box"
+BOX_VERSION = 1          # bump when BOX_ROWS changes, so boxes already running pick it up
+BOX_ROWS = [
+    {"group": "Monitoring box", "name": "lanpulse dashboard", "type": "http", "target": "http://host.docker.internal:8080",
+     "description": "The dashboard on this box"},
+    {"group": "Monitoring box", "name": "NetAlertX (device finder)", "type": "http", "target": "http://host.docker.internal:20211",
+     "description": "Device finder on this box"},
+    {"group": "Monitoring box", "name": "Speedtest Tracker", "type": "http", "target": "http://host.docker.internal:8765",
+     "description": "Speed test history on this box"},
+]
+BOX_URLS = {r["target"] for r in BOX_ROWS}
 
 
 def validate_rows(rows):
@@ -913,7 +944,7 @@ def sync_kuma(nets, base):
     """Run only the current network's devices in Uptime Kuma. Retried on later runs until it works
     (for example when the Kuma admin account hasn't been created yet on a new box)."""
     nid = nets["current"]
-    if nets.get("kuma_network") == nid:
+    if nets.get("kuma_network") == nid and nets.get("box_monitors") == BOX_VERSION:
         return False
     prev = nets.get("kuma_network")
     n = nets["networks"][nid]
@@ -924,6 +955,8 @@ def sync_kuma(nets, base):
                 k.claim_untagged(nets["legacy_id"])
             k.claim_untagged(prev if prev in nets["networks"] else nid)
             nets["legacy_claimed"] = True
+            k.ensure_box()
+            nets["box_monitors"] = BOX_VERSION
             if k.count(nid) == 0:
                 k.set_rows(nid, starter_rows(base), active=True)
                 if n.get("setup") == "migrated":
