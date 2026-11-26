@@ -57,6 +57,40 @@ function ago(iso) {
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pct = (u) => (u == null ? "" : `${(u * 100).toFixed(u >= 0.9995 ? 0 : 1)}%`);
 
+// ------------------------------------------------------------- details pop-up for any tile or alert
+const ITEMS = new Map();   // tile id -> item (with its group), refreshed on every render
+const hasDetails = (i) => i.status === "down" || i.status === "warn" || (i.details && i.details.length);
+function openItem(id) {
+  const i = ITEMS.get(id);
+  if (!i) return;
+  const gen = LAST_SNAP?.generated;
+  const rows = [
+    ["Status", `<span class="chip ${i.status === "down" ? "bad" : i.status === "warn" ? "warn" : ""}">${esc(LABEL[i.status] || i.status)}</span>${i.status === "down" && i.since ? ` since ${esc(ago(i.since))}` : ""}`],
+    ["Group", esc(i.group || "")],
+    ...(i.latency_ms != null ? [["Response time", `${Math.round(i.latency_ms)} ms`]] : []),
+    ...(i.uptime_24h != null ? [["Uptime, last 24 h", pct(i.uptime_24h)]] : []),
+    ...(i.target ? [["Checks", esc(i.target)]] : []),
+    ...(i.link ? [["Connection", linkText(i.link)]] : []),
+    ...(i.details || []).map((d) => [esc(d.label), esc(d.value)]),
+    ...(gen ? [["Last updated", esc(ago(gen))]] : []),
+  ];
+  const bars = (i.history || []).slice(-60).map((h) => `<i class="${h.s}" title="${esc(h.t || "")}"></i>`).join("");
+  $("#item-body").innerHTML = `<h2>${esc(i.name)}</h2>
+    ${i.message || i.note ? `<p class="item-msg">${esc(i.message || i.note)}</p>` : ""}
+    ${i.hint ? `<p class="item-hint"><b>What to do:</b> ${esc(i.hint)}</p>` : ""}
+    <table class="item-table"><tbody>${rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("")}</tbody></table>
+    ${bars ? `<p class="help">Recent checks, oldest first</p><div class="bars item-bars">${bars}</div>` : ""}
+    ${TILE_VIEWS[i.id] ? `<p><a href="${viewHref(TILE_VIEWS[i.id][0])}"${KIOSK ? "" : ` target="_blank" rel="noopener"`}>${TILE_VIEWS[i.id][1]} ↗</a></p>` : ""}`;
+  const d = $("#item-dialog");
+  if (!d.open) d.showModal();
+  clearTimeout(openItem.t);
+  if (KIOSK) openItem.t = setTimeout(() => d.open && d.close(), 120_000);   // wall screen: don't stay open
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-item]");
+  if (b) { e.preventDefault(); openItem(b.dataset.item); }
+});
+
 function recount(groups) {
   const s = { total: 0, up: 0, down: 0, warn: 0, note: 0, pending: 0, maintenance: 0, unknown: 0 };
   for (const g of groups) for (const i of g.items) {
@@ -156,6 +190,7 @@ function renderQuick(items, x) {
 function render(snap) {
   if (VIEW) { LAST_SNAP = snap; return renderView(snap); }
   LAST_SNAP = snap;
+  ITEMS.clear();
   // Devices and Wi-Fi signal change constantly, so they aren't shown as issues: they become quick-link
   // buttons under the banner and are left out of the tiles and the counts.
   const quick = [];
@@ -200,7 +235,7 @@ function render(snap) {
     .map((i) => ({ ...i, group: g.name })));
   const list = $("#banner-list");
   list.innerHTML = flagged.slice(0, 8).map((i) =>
-    `<li class="${i.status}"><a href="#tile-${esc(i.id)}"><b>${esc(i.name)}</b></a>${i.note || i.message ? `: ${esc(i.note || i.message)}` : ` (${esc(i.group)})`}${i.hint ? `<br><span class="hint">${esc(i.hint)}</span>` : ""}</li>`).join("");
+    `<li class="${i.status}"><a href="#tile-${esc(i.id)}"><b>${esc(i.name)}</b></a>${i.note || i.message ? `: ${esc(i.note || i.message)}` : ` (${esc(i.group)})`} <button type="button" class="ghost small more-btn" data-item="${esc(i.id)}">Details…</button>${i.hint ? `<br><span class="hint">${esc(i.hint)}</span>` : ""}</li>`).join("");
   list.hidden = !flagged.length;
 
   const groups = $("#groups");
@@ -232,6 +267,7 @@ function render(snap) {
       t.className = `tile ${i.status}${i.note ? " has-note" : ""}${isNote(i) ? " low" : ""}`;
       t.id = `tile-${i.id}`;
       t.title = i.message || "";
+      ITEMS.set(i.id, { ...i, group: g.name });
       const bars = (i.history || []).slice(-30).map((h) => `<i class="${h.s}"></i>`).join("");
       const meta = `${LABEL[i.status] || i.status}${i.status === "down" && i.since ? ` · since ${ago(i.since)}` : ""}${i.latency_ms != null && i.status === "up" ? ` · ${Math.round(i.latency_ms)} ms` : ""}`;
       t.innerHTML = `
@@ -244,6 +280,7 @@ function render(snap) {
           ${i.id === "router-signin" ? `<button type="button" class="small tile-action" data-router-signin>Sign in to the router</button>` : ""}
           ${i.link && !i.note ? `<div class="link">${linkText(i.link)}</div>` : ""}
           ${bars ? `<div class="bars">${bars}</div>` : ""}
+          ${hasDetails(i) ? `<button type="button" class="ghost small more-btn" data-item="${esc(i.id)}">Details…</button>` : ""}
         </div>
         <div class="uptime">${pct(i.uptime_24h)}<small>${i.uptime_24h != null ? "24 h" : ""}</small></div>`;
       tiles.append(t);

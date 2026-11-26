@@ -657,6 +657,49 @@ def boot_time():
     return 0
 
 
+def utilization_item(snap):
+    """'Wi-Fi network utilization' tile: how much of each of your channels' airtime is in use, as your own
+    access points report it (QBSS channel utilisation). With no neighbours sharing the channel this is your
+    own devices' traffic plus non-Wi-Fi interference; weak-signal devices use the most, because they talk
+    slowly and retry. Details list them so the cause is visible."""
+    air = snap["extras"].get("airspace") or {}
+    mine = [c for c in air.get("channels") or [] if c.get("yours") and c.get("utilisation_pct") is not None]
+    if not mine:
+        return None
+    busiest = max(mine, key=lambda c: c["utilisation_pct"])
+    u = busiest["utilisation_pct"]
+    status = "warn" if u >= 50 else "up"
+    per = [f"{c['band']} GHz ch {c['channel']}: {c['utilisation_pct']}%" for c in mine]
+    shared = [c for c in mine if c["networks"] > c["yours"] or c.get("overlapping")]
+    wifi = [c for c in snap["extras"].get("clients") or [] if c.get("online") and (c.get("link") or {}).get("type") == "wifi"]
+    weak = sorted([c for c in wifi if (c["link"].get("rssi") is not None and c["link"]["rssi"] < -80)],
+                  key=lambda c: c["link"]["rssi"])
+    label = lambda c: f"{c.get('name') or c.get('ip') or c.get('mac')} ({round(c['link']['rssi'])} dBm)"
+    note = f"{u}% of airtime in use on {busiest['band']} GHz channel {busiest['channel']}"
+    if len(mine) > 1:
+        note += " · " + ", ".join(p for p in per if not p.startswith(f"{busiest['band']} GHz ch {busiest['channel']}:"))
+    if status == "warn":
+        why = ("shared with neighbouring networks" if shared else
+               "no neighbouring networks use it, so this is your own devices' traffic"
+               + (f"; {len(weak)} weak-signal devices use the most airtime" if weak else ""))
+        note += f". Busy: {why}"
+    details = [{"label": "Airtime in use", "value": "; ".join(per)},
+               {"label": "Measured by", "value": "your own access points (channel utilisation they broadcast)"},
+               {"label": "Neighbouring networks on it", "value": ", ".join(f"{c['band']} GHz ch {c['channel']}: {c['networks'] - c['yours']}"
+                                                                     + (f" (+{c['overlapping']} overlapping)" if c.get("overlapping") else "") for c in mine)},
+               {"label": "Wi-Fi devices online", "value": str(len(wifi)) if wifi else "connect the router to see"}]
+    if weak:
+        details.append({"label": "Weak signal (slow, uses most airtime)", "value": ", ".join(label(c) for c in weak)})
+    hint = None
+    if status == "warn":
+        hint = ("Move the weak-signal devices closer to an access point, or onto 5 GHz if they support it; keep phones "
+                "and laptops on 5 GHz. Microwaves, Bluetooth and wireless cameras also use 2.4 GHz airtime.")
+        if not shared:
+            hint += " Changing channel won't help: nobody else is on it."
+    return {"id": "net-utilization", "name": "Wi-Fi network utilization", "kind": "netcheck", "status": status,
+            "note": note, "message": note, "hint": hint, "details": details}
+
+
 def still_checking(snap):
     """What's still being checked for the first time since the box started or moved to this network.
     Until those first scans finish the dashboard says 'loading', not 'everything is working'.
@@ -728,6 +771,13 @@ def build_snapshot():
     if SITE_DESC:
         snap["site"]["description"] = SITE_DESC
     attach_links(snap)
+    util = utilization_item(snap)
+    if util:
+        health = next((g for g in snap["groups"] if g["name"] == "Network health"), None)
+        if health is None:
+            health = {"name": "Network health", "items": []}
+            snap["groups"].append(health)
+        health["items"].append(util)
     snap["checking"] = still_checking(snap)
     counts = {}
     for g in snap["groups"]:

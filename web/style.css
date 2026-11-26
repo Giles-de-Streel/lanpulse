@@ -389,3 +389,15 @@ body.k-mini .sd-row { padding: .2rem 0; font-size: .85rem; }
 .theme-switch input { margin: 0; accent-color: #0f766e; }
 .theme-switch label:has(input:checked) { background: var(--card); color: var(--text); font-weight: 600; }
 body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
+
+/* details pop-up for tiles and alerts */
+.more-btn { margin-top: .35rem; padding: .15rem .6rem; font-size: .8rem; border-radius: 99px; }
+#banner-list .more-btn { margin: 0 0 0 .3rem; vertical-align: baseline; }
+.item-msg { font-size: 1.02rem; line-height: 1.45; margin: .2rem 0 .8rem; }
+.item-hint { background: var(--bg); border-left: 4px solid #0f766e; padding: .55rem .8rem; border-radius: 8px; }
+.item-table { width: 100%; border-collapse: collapse; margin: .6rem 0; }
+.item-table th { text-align: left; vertical-align: top; color: var(--muted); font-weight: 600; width: 34%; padding: .35rem .6rem .35rem 0; white-space: normal; }
+.item-table td { padding: .35rem 0; white-space: normal; }
+.item-bars { margin-bottom: .6rem; }
+.chip.bad { background: var(--down-bg); border-color: var(--down); }
+.tile .more-btn { margin-left: 0; display: inline-block; }

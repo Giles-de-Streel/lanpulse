@@ -546,6 +546,9 @@ def check_airspace(state):
     # congestion on the channels your network uses
     chans = congestion(nets, {n["bssid"] for n in mine})
     for c in chans:
+        own_only = c["utilisation_pct"] is not None and c["networks"] == c["yours"] and not c["overlapping"]
+        if own_only:
+            continue   # busy with your own traffic, not interference: the "Wi-Fi network utilization" tile reports it
         if c["yours"] and c["congestion"] in ("moderate", "heavy"):
             msg = f"{c['band']} GHz channel {c['channel']} is {'heavily' if c['congestion'] == 'heavy' else 'moderately'} congested"
             msg += (f" ({c['utilisation_pct']}% of airtime in use)" if c["utilisation_pct"] is not None
