@@ -124,12 +124,24 @@ client_specs = [
     ("Game console", "wifi", "6", "Access point: Kitchen", -50, 1921), ("Chromebook-Classroom-1", "wifi", "5", "Mesh point: Classroom wing", -72, 270),
     ("Chromebook-Classroom-2", "wifi", "5", "Mesh point: Classroom wing", -76, 173), ("Door access controller", "wired", None, "Office switch", None, 100),
 ]
+# invented traffic (Mbps down, up) so the demo shows devices ranked by usage
+DEMO_USE = {"Smart TV: Lounge": (18.4, 0.6), "Livestream encoder": (0.4, 6.2), "Game console": (9.1, 1.3),
+            "Laptop-Pastor": (3.8, 0.9), "File server (NAS)": (1.2, 2.7), "Camera: Front door": (0.05, 1.9),
+            "Camera: Parking lot": (0.04, 1.6), "Phone-Volunteer-1": (1.1, 0.2), "Galaxy-Tab": (0.7, 0.1),
+            "Office PC": (0.6, 0.15), "Chromebook-Classroom-1": (0.3, 0.05), "Smart speaker": (0.12, 0.02),
+            "Laptop-Office-2": (0.2, 0.05), "Tablet-Welcome-Desk": (0.08, 0.01), "Phone system": (0.09, 0.09),
+            "Thermostat: Hall": (0.0004, 0.0003), "Sensor-Garden": (0.0002, 0.0001)}
 clients = []
 for n, (name, typ, band, node, rssi, rate) in enumerate(client_specs, start=20):
     ip = f"192.168.1.{n + 20}"
     link = {"type": typ, "band": band, "node": node, "rssi": rssi, "rate_mbps": rate} if typ == "wifi" else \
            {"type": "wired", "node": node, "rate_mbps": rate}
-    clients.append({"mac": mac(100 + n), "ip": ip, "name": name, "online": True, "link": link})
+    c = {"mac": mac(100 + n), "ip": ip, "name": name, "online": True, "link": link}
+    if name in DEMO_USE:                        # live traffic, as a UniFi controller reports it (bits/s)
+        d, u = DEMO_USE[name]
+        c["usage"] = {"down_bps": round(d * 1e6), "up_bps": round(u * 1e6), "rate_bps": round((d + u) * 1e6),
+                      "basis": "live, from UniFi"}
+    clients.append(c)
 bands = {}
 for c in clients:
     k = "wired" if c["link"]["type"] == "wired" else f"{c['link']['band']} GHz"

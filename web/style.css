@@ -408,3 +408,9 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 @container (min-width: 930px) {
   body:not(.k-mini) .tiles.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* per-device usage (routers that report traffic) */
+.sd-use { grid-column: 2 / -1; font-size: .78rem; color: var(--muted); display: flex; align-items: center; gap: .4rem; }
+.ubar { display: inline-block; width: 70px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; vertical-align: middle; }
+.ubar i { display: block; height: 100%; background: var(--maint); }
+.utext { font-variant-numeric: tabular-nums; }

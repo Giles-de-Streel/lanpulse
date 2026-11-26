@@ -215,8 +215,18 @@ def router_asus(url, user, pw):
             "type": "wired" if w == "0" else "wifi", "band": {"1": "2.4", "2": "5", "3": "5", "4": "6"}.get(w),
             "node": node_name.get((c.get("amesh_papMac") or "").upper()), "rssi": _num(c.get("rssi"))}
         link["rate_mbps"] = _num(c.get("curTx"))
-        clients.append({"mac": mac.upper(), "ip": c.get("ip"), "name": c.get("nickName") or c.get("name"),
-                        "online": str(c.get("isOnline", "1")) == "1", "link": link})
+        cl_entry = {"mac": mac.upper(), "ip": c.get("ip"), "name": c.get("nickName") or c.get("name"),
+                    "online": str(c.get("isOnline", "1")) == "1", "link": link}
+        # traffic counters: totalTx/totalRx (newer firmware, filled when Traffic Analyzer / AiProtection
+        # statistics are on). Units and direction aren't documented, so only their combined growth between
+        # polls is used, as a busier/quieter ranking. EXPERIMENTAL until checked on real hardware.
+        tx, rx = _num(c.get("totalTx")), _num(c.get("totalRx"))
+        if tx is not None or rx is not None:
+            cl_entry["usage"] = {"total": (tx or 0) + (rx or 0), "units": "asus"}
+        clients.append(cl_entry)
+    if nodes:   # field names only (no values): shows what this firmware reports, for checking the above
+        sample = next((cl[m] for m in cl.get("maclist", []) if isinstance(cl.get(m), dict)), {}) if isinstance(cl, dict) else {}
+        nodes[0]["client_fields"] = sorted(sample)
     return {"vendor": "asus", "nodes": nodes, "clients": clients}
 
 
@@ -292,8 +302,19 @@ def router_unifi(url, user, pw):
     clients = []
     for s in stas:
         wired = s.get("is_wired", False)
+        # live usage, from the access point's / switch's side: what it transmits is the device's download.
+        # "-r" fields are bytes per second right now; the plain ones are totals since the device connected.
+        p = "wired-" if wired else ""
+        down_r, up_r = _num(s.get(f"{p}tx_bytes-r")), _num(s.get(f"{p}rx_bytes-r"))
+        usage = None
+        if down_r is not None or up_r is not None:
+            usage = {"down_bps": round((down_r or 0) * 8), "up_bps": round((up_r or 0) * 8),
+                     "rate_bps": round(((down_r or 0) + (up_r or 0)) * 8), "basis": "live, from UniFi"}
+            tot = (_num(s.get(f"{p}tx_bytes")) or 0) + (_num(s.get(f"{p}rx_bytes")) or 0)
+            if tot:
+                usage["session_bytes"] = tot
         clients.append({"mac": s["mac"].upper(), "ip": s.get("ip"), "name": s.get("name") or s.get("hostname"),
-                        "online": True, "link": {
+                        "online": True, "usage": usage, "link": {
                             "type": "wired" if wired else "wifi", "band": None if wired else radio.get(s.get("radio")),
                             "node": by_mac.get((s.get("sw_mac") if wired else s.get("ap_mac") or "").upper()),
                             "rssi": None if wired else s.get("signal"),
@@ -470,7 +491,29 @@ def fetch_router(cfg):
         part = ROUTERS[kind](url, cfg["user"], cfg["password"])
         data["nodes"] += part["nodes"]
         data["clients"] += part["clients"]
+    usage_rates(data["clients"])
     return data
+
+
+_usage_prev = {}   # mac -> (time, running total) from the previous router poll
+
+
+def usage_rates(clients):
+    """Routers that only give running traffic totals (ASUS): turn the growth since the previous poll into
+    a rate, so devices can be ranked by how busy they are. Live rates (UniFi) are left as they are."""
+    now = time.time()
+    for c in clients:
+        u = c.get("usage")
+        if not u or "total" not in u:
+            continue
+        prev = _usage_prev.get(c["mac"])
+        _usage_prev[c["mac"]] = (now, u["total"])
+        if prev and now > prev[0] and u["total"] >= prev[1]:
+            u["rate"] = (u["total"] - prev[1]) / (now - prev[0])        # router units per second
+            u["basis"] = f"average over the last {round((now - prev[0]) / 60)} min (relative)"
+        del u["total"]
+        if "rate" not in u:
+            c["usage"] = None                                          # first poll: nothing to compare yet
 
 
 def router_status():
