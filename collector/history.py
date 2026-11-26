@@ -127,6 +127,54 @@ def kuma_history(items):
     return {"from": _iso(first), "monitors": monitors, "events": events[-MAX_EVENTS:]}
 
 
+def _boot_time():
+    """Machine boot time (epoch). Containers share the host kernel, so this is the box's boot."""
+    try:
+        for line in open("/proc/stat"):
+            if line.startswith("btime "):
+                return int(line.split()[1])
+    except OSError:
+        pass
+    return None
+
+
+def _last_snapshot_time():
+    """When the previous snapshot was written (read before this run publishes a new one)."""
+    try:
+        g = json.load(open(os.path.join(DATA, "snapshot.json"))).get("generated")
+        return datetime.datetime.fromisoformat(g.replace("Z", "+00:00")).timestamp() if g else None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+_boot_checked = {"done": False}
+
+
+def note_boot(state):
+    """Once per collector start: if the box rebooted since last time, add a timeline entry saying how
+    long monitoring was paused (the box can't watch anything while it is off or restarting, so a
+    reboot, crash or power cut otherwise leaves only a silent gap in the history)."""
+    if _boot_checked["done"]:
+        return False
+    _boot_checked["done"] = True
+    bt = _boot_time()
+    if bt is None:
+        return False
+    prev = state.get("boot")
+    state["boot"] = bt
+    if prev is None or abs(bt - prev) < 5:      # first run, or only the collector restarted
+        return True
+    last = _last_snapshot_time()
+    gap = int(time.time() - last) if last and last < time.time() else None
+    long_off = gap is not None and gap > 15 * 60
+    msg = (f"monitoring paused for about {max(1, round(gap / 60))} min" if gap else "monitoring paused") + \
+          (" (it was off for a while: power cut or switched off?)" if long_off else "")
+    state["events"].append({"t": datetime.datetime.fromtimestamp(bt, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            "id": "box-boot", "name": "Monitoring box", "s": "restart", "from": "up",
+                            "kind": "boot", "gap_s": gap, "msg": msg})
+    return True
+
+
 def track_changes(snap):
     """Record status changes of lanpulse's own (non-Kuma) items between snapshots."""
     path = os.path.join(DATA, "history-changes.json")
@@ -134,7 +182,8 @@ def track_changes(snap):
         state = json.load(open(path))
     except (OSError, ValueError):
         state = {"last": {}, "events": []}
-    now, changed = _now(), False
+    now = _now()
+    changed = note_boot(state)
     for g in snap.get("groups", []):
         for i in g["items"]:
             if i["id"].startswith("kuma-") or i["id"] in SKIP:
