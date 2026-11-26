@@ -105,3 +105,9 @@ internet time. Browsers can't use NTP, so every network check the box queries pu
 time.windows.com; `NETCHECK_NTP=0` turns it off) and records its own offset in `extras.time`. The page
 compares the PC with the server through the HTTP `Date` header (1-second resolution), so a PC within
 about 2 s counts as matching. Hover a server name for its answer time and offset.
+
+## Wall screen updates itself
+
+The wall screen checks the page files' version tags (ETag) every minute and reloads itself when they
+change on two checks in a row, so deploying new page files needs no browser restart (about 2 minutes).
+Only the wall screen does this; normal browser tabs and the admin view are left alone.
