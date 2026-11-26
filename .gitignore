@@ -5,3 +5,4 @@
 /monitors/
 /data/
 /backups/
+__pycache__/
