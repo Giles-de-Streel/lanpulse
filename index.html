@@ -48,6 +48,7 @@
   <footer>
     <span class="legend"><i class="up"></i>Working <i class="pending"></i>Needs a look / checking <i class="down"></i>Not responding</span>
     <span class="foot-right">
+      <span id="net-info" class="help"></span>
       <a class="project" href="https://github.com/Giles-de-Streel/lanpulse" target="_blank" rel="noopener">lanpulse</a>
     </span>
   </footer>
@@ -111,6 +112,55 @@
         <button type="button" class="ghost" data-close>Close</button>
         <button type="button" id="r-test" class="ghost">Test</button>
         <button type="button" id="r-save">Save and connect</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="devices-dialog" class="wide">
+    <form id="devices-form" method="dialog" autocomplete="off">
+      <h2>Devices to watch on <span id="dv-net"></span></h2>
+      <p class="help">Each line is checked every minute and shown on the dashboard. This list belongs to this network only: other networks the box has been on keep their own.</p>
+      <div class="dv-add">
+        <label>Add from devices found on this network
+          <select id="dv-found"><option value="">Choose a device…</option></select>
+        </label>
+        <label>Copy the list from another network
+          <select id="dv-copy"><option value="">Choose a network…</option></select>
+        </label>
+        <details>
+          <summary>Paste a list (CSV)</summary>
+          <p class="help">One device per line: <code>group,name,type,target,description</code>. Types: <code>ping</code> 192.168.1.10, <code>http</code> http://192.168.1.20, <code>port</code> 192.168.1.30:445, <code>dns</code> example.com@192.168.1.1.</p>
+          <textarea id="dv-csv" rows="5" spellcheck="false"></textarea>
+          <button type="button" id="dv-csv-add" class="ghost">Add these lines</button>
+        </details>
+      </div>
+      <div class="scroll"><table class="dv-table"><thead><tr><th>Group</th><th>Name</th><th>Check</th><th>Address</th><th></th></tr></thead><tbody id="dv-rows"></tbody></table></div>
+      <button type="button" id="dv-new" class="ghost small">+ Add a line</button>
+      <p id="dv-result" class="result" hidden></p>
+      <menu>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" data-close>Close</button>
+        <button type="button" id="dv-save">Save the list</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="wifi-dialog">
+    <form id="wifi-form" method="dialog" autocomplete="off">
+      <h2>Join a Wi-Fi network</h2>
+      <p class="help">For when there's no cable to plug the box into. A cable gives steadier readings. If you're using this page from another device over Wi-Fi, it will lose the box while it switches: find it again at <code id="wf-host"></code>.</p>
+      <label>Network
+        <select id="wf-ssid"><option value="">Scanning…</option></select>
+      </label>
+      <label>Password
+        <span class="pw"><input id="wf-pass" type="password" autocomplete="off" spellcheck="false"><button type="button" id="wf-show" class="ghost">Show</button></span>
+      </label>
+      <p id="wf-result" class="result" hidden></p>
+      <menu>
+        <button type="button" id="wf-scan" class="ghost">Scan again</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" data-close>Close</button>
+        <button type="button" id="wf-join">Join</button>
       </menu>
     </form>
   </dialog>
