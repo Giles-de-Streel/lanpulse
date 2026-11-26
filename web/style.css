@@ -415,3 +415,5 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 .ubar i { display: block; height: 100%; background: var(--maint); }
 .utext { font-variant-numeric: tabular-nums; }
 .guess { font-style: italic; }
+#box-ips { margin: .15rem 0 0; color: var(--muted); font-size: .85rem; }
+#box-ips b { color: var(--text); font-weight: 600; }

@@ -788,6 +788,35 @@ def ntp_query(host, timeout=2.0):
     return ((t2 - t1) + (t3 - t4)) / 2, (t4 - t1) - (t3 - t2), stratum
 
 
+def box_addresses():
+    """The monitoring box's own name and IPv4 addresses, main connection (default route) first."""
+    import socket
+    try:
+        addrs = json.loads(subprocess.run(["ip", "-j", "-4", "addr", "show", "up"], capture_output=True,
+                                          text=True, timeout=10).stdout or "[]")
+        routes = json.loads(subprocess.run(["ip", "-j", "route", "show", "default"], capture_output=True,
+                                           text=True, timeout=10).stdout or "[]")
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return None
+    metric = {r.get("dev"): r.get("metric", 0) for r in routes}
+    ips = []
+    for a in addrs:
+        dev = a.get("ifname", "")
+        if dev == "lo" or dev.startswith(("docker", "br-", "veth", "virbr", "tun", "wg", "tailscale")):
+            continue
+        kind = "Wi-Fi" if os.path.isdir(f"/sys/class/net/{dev}/wireless") else "wired"
+        for i in a.get("addr_info", []):
+            if i.get("family") == "inet" and i.get("scope") == "global":
+                ips.append({"ip": i["local"], "dev": dev, "kind": kind, "main": False,
+                            "_m": metric.get(dev, 1 << 30)})
+    ips.sort(key=lambda x: x["_m"])
+    for x in ips:
+        if x["_m"] < 1 << 30 and not any(y["main"] for y in ips):
+            x["main"] = True
+        x.pop("_m")
+    return {"hostname": socket.gethostname(), "ips": ips}
+
+
 def time_sources():
     """Compare this box's clock with a few free public NTP servers (NETCHECK_NTP_SERVERS)."""
     hosts = [h.strip() for h in env("NETCHECK_NTP_SERVERS",
@@ -858,6 +887,9 @@ def main():
     exposure = {"upnp": upnp, "public_ip": next((c["detail"].get("ip") for c in checks if c["id"] == "publicip"), None),
                 "nat": next((c["summary"] for c in checks if c["id"] == "nat"), None)}
     extras["exposure"] = exposure
+    box = box_addresses()
+    if box:
+        extras["box"] = box
     if enabled("ntp"):
         try:
             extras["time"] = time_sources()

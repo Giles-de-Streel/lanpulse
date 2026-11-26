@@ -299,6 +299,8 @@ extras["time"] = {"at": ago(minutes=4), "box_offset_ms": -2.1, "servers": [
     {"host": "pool.ntp.org", "ok": True, "offset_ms": 0.9, "rtt_ms": 41.5, "stratum": 2},
     {"host": "time.nist.gov", "ok": True, "offset_ms": -2.6, "rtt_ms": 33.0, "stratum": 1},
     {"host": "time.windows.com", "ok": True, "offset_ms": -6.3, "rtt_ms": 47.7, "stratum": 4}]}
+extras["box"] = {"hostname": "lanpulse", "ips": [{"ip": "192.168.1.5", "dev": "eth0", "kind": "wired", "main": True},
+                                         {"ip": "192.168.1.6", "dev": "wlan0", "kind": "Wi-Fi", "main": False}]}
 extras["history"] = {
     "from": ago(days=45), "monitors": history_monitors, "events": history_events,
     "changes": [
