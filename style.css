@@ -1,7 +1,7 @@
 :root {
-  --bg: #c9c8c3; --card: #d9d8d3; --text: #1f2226; --muted: #4a4e55; --line: #b9b7b0;
-  --up: #16a34a; --up-bg: #c6d6ca; --down: #dc2626; --down-bg: #e0c9c6;
-  --pending: #d97706; --pending-bg: #ddd1b8; --maint: #2563eb; --unknown: #9aa4b2;
+  --bg: #b9b3a7; --card: #c8c2b6; --text: #1e1d1a; --muted: #45423c; --line: #a59e91;
+  --up: #16a34a; --up-bg: #b4c2ae; --down: #dc2626; --down-bg: #cfb6ae;
+  --pending: #d97706; --pending-bg: #cdbf9f; --maint: #2563eb; --unknown: #9aa4b2;
   --radius: 14px; color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -294,11 +294,11 @@ button.small { padding: .15rem .55rem; font-size: .8rem; margin-left: .4rem; }
 /* quick-link buttons: bigger, shaded so they stand out */
 .quick { gap: .6rem; margin: .8rem 0 .3rem; }
 .qbtn { padding: .55rem 1.15rem; font-size: 1rem; gap: .55rem;
-  background: #c3d2cd; border-color: #9fb7b0; box-shadow: 0 1px 2px rgba(15, 118, 110, .12); }
+  background: #b1bdb2; border-color: #929f93; box-shadow: 0 1px 2px rgba(15, 118, 110, .12); }
 .qbtn b { color: #0b5e58; }
 .qbtn span { color: #3d5c58; font-size: .9rem; }
 .qbtn i { font-size: .9rem; }
-.qbtn:hover { background: #b6c8c2; border-color: #0f766e; }
+.qbtn:hover { background: #a5b3a7; border-color: #0f766e; }
 body.kiosk .qbtn { font-size: .95rem; padding: .45rem 1rem; }
 @media (prefers-color-scheme: dark) {
   .qbtn { background: #12302d; border-color: #1f4f4a; }
