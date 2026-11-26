@@ -17,6 +17,8 @@
 	}
 
 	handle {
+		# page files: browsers revalidate each load (cheap 304s), so updates always show
+		header Cache-Control "no-cache"
 		root * /srv/www
 		file_server
 	}
