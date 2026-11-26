@@ -401,3 +401,9 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 .item-bars { margin-bottom: .6rem; }
 .chip.bad { background: var(--down-bg); border-color: var(--down); }
 .tile .more-btn { margin-left: 0; display: inline-block; }
+
+/* groups of 3+ boxes stretch them to fill the row (no empty slot), still at most 4 per row */
+.tiles.fill { grid-template-columns: repeat(auto-fit, minmax(max(280px, calc((100% - 2.2rem) / 4)), 1fr)); }
+body.kiosk .tiles.fill { grid-template-columns: repeat(auto-fit, minmax(max(300px, calc((100% - 2.2rem) / 4)), 1fr)); }
+body.k-compact .tiles.fill { grid-template-columns: repeat(auto-fit, minmax(max(240px, calc((100% - 1.45rem) / 4)), 1fr)); }
+body.k-mini .tiles.fill { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
