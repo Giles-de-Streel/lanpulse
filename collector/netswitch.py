@@ -620,7 +620,14 @@ def starter_rows(cur):
             {"group": "Network", "name": "Internet", "type": "ping", "target": "1.1.1.1",
              "description": "Reaching the internet (Cloudflare)"},
             {"group": "Network", "name": "Name lookups", "type": "dns", "target": f"example.com@{gw}",
-             "description": "The router answers DNS"}]
+             "description": "The router answers DNS"},
+            # the box's own services: the same on every network
+            {"group": "Monitoring box", "name": "lanpulse dashboard", "type": "http", "target": "http://host.docker.internal:8080",
+             "description": "The dashboard on this box"},
+            {"group": "Monitoring box", "name": "NetAlertX (device finder)", "type": "http", "target": "http://host.docker.internal:20211",
+             "description": "Device finder on this box"},
+            {"group": "Monitoring box", "name": "Speedtest Tracker", "type": "http", "target": "http://host.docker.internal:8765",
+             "description": "Speed test history on this box"}]
 
 
 def validate_rows(rows):
