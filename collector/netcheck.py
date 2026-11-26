@@ -15,13 +15,18 @@ Checks (each can be turned off in /opt/monitor/lanpulse.env, NETCHECK_<NAME>=0):
   devices  devices seen by NetAlertX: online, new, unidentified
 
 Status values: up (fine), warn (needs a look), down (broken), unknown (couldn't tell).
+
+The box can move between networks: each run first asks netswitch.py which network it is on, and
+everything learned (public IP, access points, speed "normal", which devices are new) is kept per
+network, so a new site starts fresh instead of raising false alarms.
 Standard library only; usage:  sudo python3 netcheck.py [--print]
 """
 import ipaddress, json, os, re, subprocess, sys, time, datetime, urllib.request
 
 APP = os.environ.get("APP", "/opt/monitor")
 OUT = os.path.join(APP, "data", "netcheck.json")
-STATE = os.path.join(APP, "data", "netcheck-state.json")
+STATE = os.path.join(APP, "data", "netcheck-state.json")    # replaced per network in main()
+NETWORK = None                                               # current network record (netswitch.py)
 INTERNET_TARGET = "1.1.1.1"
 
 
@@ -593,6 +598,17 @@ def check_speed():
         con.close()
     except Exception as e:
         return result("speed", "Internet speed", "unknown", f"Couldn't read Speedtest Tracker: {e}"), None
+    periods = (NETWORK or {}).get("periods") or []
+    def here(created):
+        """Was this test run while the box was on the current network? (times are UTC, no zone)"""
+        if not periods:
+            return True
+        try:
+            t = datetime.datetime.fromisoformat(str(created)[:19]).replace(tzinfo=datetime.timezone.utc).timestamp()
+        except ValueError:
+            return True
+        return any(a - 600 <= t <= (b or time.time()) + 600 for a, b in periods)
+    rows = [r for r in rows if here(r[4])]
     hist = []
     for status, ping, down, up, created, data in rows:
         ok = str(status).lower() in ("completed", "success", "1")
@@ -608,7 +624,7 @@ def check_speed():
                      "up_mbps": round(up * 8 / 1e6, 1) if up else None, **extra})
     if not hist:
         return result("speed", "Internet speed", "pending",
-                      "No speed tests yet. Speedtest Tracker runs one every few hours"), {"history": []}
+                      "No speed tests on this network yet. Speedtest Tracker runs one every few hours"), {"history": []}
     good = [h for h in hist if h["ok"] and h["down_mbps"]]
     last = hist[-1]
     x = {"history": hist[-60:]}
@@ -651,14 +667,34 @@ def check_devices(state):
     except Exception as e:
         return result("devices", "Devices on the network", "unknown", f"Couldn't read NetAlertX: {e}"), None
     def ts(s):
+        """NetAlertX stores times in UTC without a zone marker."""
         try:
-            return datetime.datetime.fromisoformat(str(s)[:19]).timestamp()
+            return datetime.datetime.fromisoformat(str(s)[:19]).replace(tzinfo=datetime.timezone.utc).timestamp()
         except (TypeError, ValueError):
             return None
-    # "New" = first seen in the last 24 h, but not part of the initial sweep when monitoring
-    # started (NetAlertX's own "new" flag stays on until someone acknowledges it in NetAlertX).
+    # Only devices of the network the box is on now: last seen at an address in its subnet, during
+    # a time the box was on it (another site using the same 192.168.1.x range doesn't count).
+    net = NETWORK or {}
+    subnet = None
+    try:
+        subnet = ipaddress.ip_network(net["subnet"]) if net.get("subnet") else None
+    except ValueError:
+        pass
+    periods = net.get("periods") or []
+    def on_this_network(ip, last):
+        try:
+            if subnet and ipaddress.ip_address(ip) not in subnet:
+                return False
+        except ValueError:
+            return False
+        t = ts(last)
+        return not periods or t is None or any(a - 900 <= t <= (b or time.time()) + 900 for a, b in periods)
+    rows = [r for r in rows if on_this_network(r[2], r[5])]
+    # "New" = first seen in the last 24 h, but not part of the initial sweep when monitoring of this
+    # network started (NetAlertX's own "new" flag stays on until someone acknowledges it in NetAlertX).
     firsts = [t for t in (ts(r[4]) for r in rows) if t]
-    sweep_end = (min(firsts) + 3600) if firsts else 0
+    start = net.get("first_seen")
+    sweep_end = (max(start, min(firsts) if firsts else start) + 3600) if start else ((min(firsts) + 3600) if firsts else 0)
     now = time.time()
     devs = []
     for mac, name, ip, vendor, first, last, present, _flag, ssid, parent in rows:
@@ -761,6 +797,15 @@ def time_sources():
 
 
 def main():
+    global NETWORK, STATE
+    try:
+        import netswitch                                    # same folder
+        NETWORK = netswitch.ensure()
+        if NETWORK:
+            STATE = netswitch.state_path(NETWORK["id"])
+            os.makedirs(os.path.dirname(STATE), mode=0o700, exist_ok=True)
+    except Exception as e:
+        print(f"netswitch: {e}", file=sys.stderr)
     gw, dev = default_route()
     try:
         state = json.load(open(STATE))
@@ -814,15 +859,16 @@ def main():
             c["hint"] = HINTS[c["id"]]
     report = {"generated": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
               "interface": dev, "interface_kind": iface_kind(dev), "gateway": gw, "checks": checks,
-              "extras": extras}
+              "extras": extras,
+              "network": {"id": NETWORK["id"], "name": NETWORK["name"]} if NETWORK else None}
     if iface_kind(dev) == "Wi-Fi":
         report["note"] = "The box is on Wi-Fi; plug it into the router for reliable results"
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    for path, data in ((OUT, report), (STATE, state)):
+    for path, data, mode in ((OUT, report, 0o644), (STATE, state, 0o600)):
         tmp = path + ".tmp"
         with open(tmp, "w") as f:
             json.dump(data, f, indent=1)
-        os.chmod(tmp, 0o644)
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     if "--print" in sys.argv:
         for c in checks:

@@ -384,14 +384,56 @@ def save_settings(s):
     os.replace(tmp, SETTINGS)
 
 
+def current_network():
+    """The network the box is on now, from data/network.json (written by netswitch.py on the host)."""
+    try:
+        n = json.load(open(os.path.join(os.environ.get("PUBLISH_FILE_DIR", "/data"), "network.json")))
+        return n if n.get("id") else None
+    except (OSError, ValueError):
+        return None
+
+
+def current_network_file():
+    try:
+        return json.load(open(os.path.join(os.environ.get("PUBLISH_FILE_DIR", "/data"), "network.json")))
+    except (OSError, ValueError):
+        return {}
+
+
+def _in_subnet(url, subnet):
+    """Does this router address belong to the given subnet? (Names rather than IPs are accepted.)"""
+    import ipaddress
+    host = urllib.parse.urlparse(url if "://" in url else f"http://{url}").hostname or ""
+    try:
+        return ipaddress.ip_address(host) in ipaddress.ip_network(subnet)
+    except ValueError:
+        return True
+
+
 def router_config():
-    """Router settings: saved from the dashboard (config/settings.json) win over lanpulse.env."""
-    r = load_settings().get("router") or {}
-    cfg = {"type": os.environ.get("ROUTER_TYPE", ""), "url": os.environ.get("ROUTER_URL", ""),
-           "user": os.environ.get("ROUTER_USER", ""), "password": os.environ.get("ROUTER_PASS", ""),
-           "source": "lanpulse.env"}
+    """Router settings for the network the box is on now. Each network keeps its own login
+    (config/settings.json "routers", saved from the dashboard), so a login saved at one site is
+    never tried against another site's router. lanpulse.env's ROUTER_* is a fallback, used only
+    while the box is on the subnet that address belongs to."""
+    s = load_settings()
+    net = current_network()
+    nid = net["id"] if net else None
+    old = s.get("router")
+    if nid and old and (old.get("type") in (None, "", "none") or not net.get("subnet") or
+                        all(_in_subnet(u.strip(), net["subnet"]) for u in (old.get("url") or "").split(",") if u.strip())):
+        # older boxes kept one login: it belongs to the network whose subnet its address is in
+        s.setdefault("routers", {})[nid] = s.pop("router")
+        save_settings(s)
+    cfg = {"type": "", "url": "", "user": "", "password": "", "source": None, "network": nid,
+           "network_name": net and net.get("name")}
+    env = {"type": os.environ.get("ROUTER_TYPE", ""), "url": os.environ.get("ROUTER_URL", ""),
+           "user": os.environ.get("ROUTER_USER", ""), "password": os.environ.get("ROUTER_PASS", "")}
+    r = (s.get("routers") or {}).get(nid) if nid else old
     if r:
         cfg.update({k: r.get(k, "") for k in ("type", "url", "user", "password")}, source="dashboard")
+    elif env["type"] and (not net or not net.get("subnet") or
+                          all(_in_subnet(u.strip(), net["subnet"]) for u in env["url"].split(",") if u.strip())):
+        cfg.update(env, source="lanpulse.env")
     cfg["type"] = (cfg["type"] or "").strip().lower()
     return cfg
 
@@ -417,6 +459,7 @@ def router_status():
     cfg = router_config()
     return {"type": cfg["type"] or None, "url": cfg["url"] or None, "user": cfg["user"] or None,
             "has_password": bool(cfg["password"]), "source": cfg["source"],
+            "network": cfg["network"], "network_name": cfg["network_name"],
             "ok": _router_cache["data"] is not None and not _router_cache["error"],
             "error": _router_cache["error"], "checked": _router_cache["t"] or None}
 
@@ -580,6 +623,10 @@ def build_snapshot():
         except Exception as e:
             snap["sources"].append({"name": name, "ok": False, "error": str(e)[:200]})
             log(f"source {name} failed: {e}")
+    net = current_network()
+    if net:
+        snap["extras"]["network"] = {k: net.get(k) for k in
+                                     ("id", "name", "subnet", "gateway", "interface", "kind", "ssid", "since", "setup", "visits")}
     if SITE_NAME:
         snap["site"]["name"] = SITE_NAME
     if SITE_DESC:
@@ -771,10 +818,36 @@ class SettingsAPI(BaseHTTPRequestHandler):
         except ValueError:
             return None
 
+    def _network(self):
+        """Everything the admin view's "This network" card needs."""
+        net = current_network()
+        known = (net or {}).get("known") or []
+        try:
+            lists = network_lists()
+        except Exception as e:
+            log(f"network lists: {e}")
+            lists = {}
+        try:
+            devs = json.load(open(os.path.join(os.environ.get("PUBLISH_FILE_DIR", "/data"), "netcheck.json")))
+            devs = (devs.get("extras") or {}).get("devices") or []
+        except (OSError, ValueError):
+            devs = []
+        return {"network": net and {k: v for k, v in net.items() if k != "known"},
+                "hostname": (net or {}).get("hostname") or (current_network_file().get("hostname")),
+                "networks": [{**k, "monitors": len(lists.get(k["id"], [])), "rows": lists.get(k["id"], [])} for k in known],
+                "discovered": [{k: d.get(k) for k in ("ip", "name", "vendor", "mac", "online", "this_box")}
+                               for d in devs if d.get("ip")][:300],
+                "wifi": any(os.path.isdir(f"/sys/class/net/{d}/wireless") for d in os.listdir("/sys/class/net"))
+                        if os.path.isdir("/sys/class/net") else False}
+
     def do_GET(self):
         path = self.path.split("?")[0]
         if path == "/api/session":
             return self._send(200, self._session_info())
+        if path == "/api/network":
+            if not self._signed_in():
+                return self._send(401, {"error": "Sign in as administrator first", **self._session_info()})
+            return self._send(200, self._network())
         if path == "/api/settings":
             if not self._signed_in():
                 return self._send(401, {"error": "Sign in as administrator first", **self._session_info()})
@@ -846,14 +919,33 @@ class SettingsAPI(BaseHTTPRequestHandler):
             if not sent:
                 return self._send(400, {"error": "No phone-alert topic to test" + (" (it needs a login: send a test from Uptime Kuma)" if skipped else "")})
             return self._send(200, {"ok": True, "sent": len(sent)})
+        if path == "/api/network":                           # changes the host carries out (signed in)
+            if not self._signed_in():
+                return self._send(401, {"error": "Sign in as administrator first"})
+            kind = str(req.get("type") or "")
+            allowed = {"rename": ("network", "name"), "monitors": ("network", "rows"), "forget": ("network",),
+                       "wifi_scan": (), "wifi_join": ("ssid", "password")}
+            if kind not in allowed:
+                return self._send(400, {"error": "unknown request"})
+            res = host_request({"type": kind, **{k: req.get(k) for k in allowed[kind]}},
+                               wait=90 if kind in ("monitors", "wifi_join", "forget") else 45)
+            if res is None:
+                return self._send(202, {"ok": None, "pending": True,
+                                        "error": "Still working on it. Check again in a minute."})
+            WAKE.set()
+            return self._send(200, {**res, **({} if kind == "wifi_scan" else {"state": self._network()})})
         if path != "/api/router":
             return self._send(404, {"error": "not found"})
         if not self._signed_in():
             return self._send(401, {"error": "Sign in as administrator first"})
         action = req.get("action", "save")
+        nid = (current_network() or {}).get("id")
+        if not nid:
+            return self._send(409, {"error": "The box hasn't worked out which network it is on yet. Try again in a minute."})
         if action == "remove":
             s = load_settings()
-            s["router"] = {"type": "none"}
+            s.setdefault("routers", {})[nid] = {"type": "none"}
+            s.pop("router", None)
             save_settings(s)
             _router_cache.update(t=0, data=None, error=None, key=None)
             WAKE.set()
@@ -885,12 +977,57 @@ class SettingsAPI(BaseHTTPRequestHandler):
         out = {"ok": True, "nodes": len(data["nodes"]), "clients": len(data["clients"]), "client_bands": bands}
         if action == "save":
             s = load_settings()
-            s["router"] = cfg
+            s.setdefault("routers", {})[nid] = cfg
+            s.pop("router", None)
             save_settings(s)
             _router_cache.update(t=time.time(), data=data, error=None, key=(kind, url, user, password))
             WAKE.set()
             out["saved"] = True
         self._send(200, out)
+
+
+REQUESTS = os.path.join(CONFIG_DIR, "requests")
+
+
+def host_request(req, wait=45):
+    """Hand a change to the host (netswitch.py --requests, started by a systemd path unit) and wait
+    for its answer. The collector container can't use NetworkManager or restart Uptime Kuma itself."""
+    os.makedirs(REQUESTS, mode=0o700, exist_ok=True)
+    rid = secrets.token_hex(12)
+    tmp = os.path.join(REQUESTS, f"{rid}.tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(req, f)
+    os.replace(tmp, os.path.join(REQUESTS, f"{rid}.req"))
+    res_path = os.path.join(REQUESTS, f"{rid}.res")
+    end = time.time() + wait
+    while time.time() < end:
+        if os.path.exists(res_path):
+            try:
+                res = json.load(open(res_path))
+            except ValueError:
+                time.sleep(0.3)
+                continue
+            os.remove(res_path)
+            return res
+        time.sleep(0.5)
+    return None
+
+
+def network_lists():
+    """network id -> its device list (Uptime Kuma monitors tagged lanpulse-network=<id>)."""
+    from history import kuma_query
+    rows = kuma_query(
+        "SELECT mt.value, coalesce(g.name, 'Other'), m.name, m.type, CASE m.type WHEN 'ping' THEN m.hostname "
+        "WHEN 'http' THEN m.url WHEN 'port' THEN m.hostname || ':' || m.port "
+        "WHEN 'dns' THEN m.hostname || '@' || m.dns_resolve_server ELSE coalesce(m.hostname, m.url) END, "
+        "coalesce(m.description, '') FROM monitor m JOIN monitor_tag mt ON mt.monitor_id = m.id "
+        "JOIN tag t ON t.id = mt.tag_id AND t.name = 'lanpulse-network' LEFT JOIN monitor g ON g.id = m.parent "
+        "WHERE m.type <> 'group' ORDER BY coalesce(g.weight, 99999), m.weight, m.id")
+    out = {}
+    for nid, g, name, typ, tgt, desc in rows:
+        out.setdefault(nid, []).append({"group": g, "name": name, "type": typ, "target": tgt or "", "description": desc})
+    return out
 
 
 def start_api():

@@ -238,6 +238,8 @@ function render(snap) {
     groups.append(sec);
   }
   renderDetails(snap.extras || {});
+  const net = (snap.extras || {}).network;
+  $("#net-info").textContent = net ? `On ${net.name}${net.kind ? ` · ${net.kind === "Wi-Fi" ? `Wi-Fi${net.ssid ? ` ${net.ssid}` : ""}` : "cable"}` : ""}` : "";
   if (KIOSK) requestAnimationFrame(fitKiosk);
 
   const gen = snap.generated ? new Date(snap.generated) : null;
@@ -646,6 +648,8 @@ function renderAdminPanel() {
   document.body.classList.add("admin-view");
   if (p.dataset.done) {   // keep forms intact; refresh only the live parts
     $("#ap-health").innerHTML = adminHealth();
+    const nid = LAST_SNAP?.extras?.network?.id;
+    if (nid && NET && NET.network && NET.network.id !== nid) loadNetwork();   // the box moved
     const a = $("#ap-alerts"), n = String((BOX?.alerts || []).length);
     if (a && a.dataset.n !== n) { a.innerHTML = alertsCard(); a.dataset.n = n; }
     return;
@@ -663,6 +667,7 @@ function renderAdminPanel() {
     </div>
     ${FROM_KIOSK ? `<p class="help">Returns to the wall screen by itself after 10 minutes without use.</p>` : ""}
     <div class="admin-grid">
+      <div class="admin-card net-card" id="ap-net"><h3>This network</h3><div id="ap-net-body"><p class="help">Loading…</p></div></div>
       <div class="admin-card"><h3>Router connection</h3><div id="ap-router"></div></div>
       <div class="admin-card"><h3>Tools</h3>
         <div class="tools">
@@ -690,6 +695,7 @@ function renderAdminPanel() {
   $("#ap-router").append(setup);
   setup.hidden = !BOX;
   wireAlertsCard();
+  loadNetwork();
   $("#ap-signout").onclick = async () => {
     try { await api("api/logout", { method: "POST", body: "{}" }); } catch {}
     location.href = FROM_KIOSK ? "./?kiosk" : "./";
@@ -728,7 +734,7 @@ function renderSetup() {
   let cls, html;
   if (!st.type || st.type === "none") {
     cls = "invite";
-    html = `<div><b>See how every device is connected</b><br><span class="help">Connect your router to show which devices use a cable, 2.4 GHz or 5 GHz, which access point they use and how strong their signal is.</span></div>
+    html = `<div><b>See how every device is connected</b><br><span class="help">Connect ${st.network_name ? `this network's (${esc(st.network_name)})` : "your"} router to show which devices use a cable, 2.4 GHz or 5 GHz, which access point they use and how strong their signal is. Each network keeps its own router login.</span></div>
             <button id="setup-open">Connect your router</button>`;
   } else if (!st.has_password || st.error) {
     cls = "problem";
@@ -736,7 +742,7 @@ function renderSetup() {
             <button id="setup-open">Fix the connection</button>`;
   } else {
     cls = "ok";
-    html = `<div><b>Router connected</b> <span class="help">${esc(label(st.type))} at ${esc(st.url)}</span></div>
+    html = `<div><b>Router connected</b> <span class="help">${esc(label(st.type))} at ${esc(st.url)}${st.network_name ? `, on ${esc(st.network_name)}` : ""}</span></div>
             <button id="setup-open" class="ghost">Change</button>`;
   }
   box.className = `setup ${cls}`;
@@ -798,6 +804,182 @@ async function routerAction(action) {
     for (const b of $("#router-form").querySelectorAll("button")) b.disabled = false;
   }
   function show(msg, ok) { out.hidden = false; out.textContent = msg; out.className = `result ${ok === true ? "good" : ok === false ? "bad" : ""}`; }
+}
+
+// ---------------------------------------------------------------- this network (admin view)
+// The box can move between networks. It recognises each one by its router, keeps a separate device
+// list, router login and history for each, and starts a new network with a small starter list.
+var NET = null;                       // GET api/network
+const CHECKS = { ping: "Ping", http: "Web page", port: "Port open", dns: "Name lookup" };
+
+async function netRequest(body, out) {
+  const say = (m, ok) => { if (!out) return; out.hidden = false; out.className = `result ${ok === true ? "good" : ok === false ? "bad" : ""}`; out.textContent = m; };
+  try {
+    const [r, j] = await api("api/network", { method: "POST", body: JSON.stringify(body) });
+    if (j.state) { NET = j.state; renderNetwork(); }
+    if (!r.ok || j.ok === false) { say(j.error || `Failed (HTTP ${r.status})`, false); return null; }
+    if (j.pending) { say(j.error, null); return null; }
+    return j;
+  } catch (e) { say(`Couldn't reach the box: ${e.message}`, false); return null; }
+}
+
+async function loadNetwork() {
+  try {
+    const [r, j] = await api("api/network");
+    if (r.ok) { NET = j; renderNetwork(); }
+  } catch { /* not on a box */ }
+}
+
+function renderNetwork() {
+  const body = $("#ap-net-body");
+  if (!body || !NET) return;
+  const n = NET.network;
+  if (!n) {
+    body.innerHTML = `<p class="warning">The box isn't connected to a network right now (no router found). Plug in a network cable${NET.wifi ? ", or join a Wi-Fi network" : ""}.</p>
+      ${NET.wifi ? `<button id="ap-wifi" class="ghost">Join Wi-Fi…</button>` : ""}`;
+    $("#ap-wifi")?.addEventListener("click", openWifi);
+    return;
+  }
+  const here = NET.networks.find((x) => x.id === n.id) || { rows: [], monitors: 0 };
+  const others = NET.networks.filter((x) => x.id !== n.id);
+  const fresh = n.setup === "starter";
+  const when = (t) => (t ? new Date(t * 1000).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "?");
+  body.innerHTML = `
+    ${fresh ? `<div class="setup invite"><div><b>${n.visits > 1 ? "This network has only the starter list" : "New network"}</b><br>
+      <span class="help">The box is watching the router, the internet and name lookups here. Choose the devices that matter on this network.</span></div>
+      <button id="ap-dev-open2">Choose devices</button></div>` : ""}
+    <form id="ap-net-name" class="inline">
+      <label>Name <span class="help">(the dashboard's title on this network)</span>
+        <span class="pw"><input id="ap-net-n" value="${esc(n.name)}" maxlength="80"><button type="submit" class="ghost">Rename</button></span>
+      </label>
+    </form>
+    <p id="ap-net-result" class="result" hidden></p>
+    <ul class="facts">
+      <li>Connected by ${n.kind === "Wi-Fi" ? `<b>Wi-Fi</b>${n.ssid ? ` (${esc(n.ssid)})` : ""}` : "<b>cable</b>"} on ${esc(n.interface || "?")}: address ${esc(n.address || "?")}, network ${esc(n.subnet || "?")}, router ${esc(n.gateway || "?")}</li>
+      <li>Here since ${esc(when(n.since))}${n.visits > 1 ? ` · visit ${n.visits}` : ""} · first seen ${esc(when(n.first_seen))}</li>
+      <li>Find the box from any network at <a href="http://${esc(NET.hostname || "lanpulse")}.local:8080/">${esc(NET.hostname || "lanpulse")}.local:8080</a> <span class="help">(or ${esc(n.address || "")}:8080)</span></li>
+    </ul>
+    <div class="net-actions">
+      <button id="ap-dev-open" class="${fresh ? "ghost" : ""}">Devices to watch (${here.monitors})</button>
+      ${NET.wifi ? `<button id="ap-wifi" class="ghost">Join Wi-Fi…</button>` : ""}
+    </div>
+    ${others.length ? `<h4>Other networks this box knows</h4>
+      <ul class="netlist">${others.map((o) => `<li><b>${esc(o.name)}</b> <span class="help">${esc(o.subnet || "")} · last there ${esc(when(o.last_seen))} · ${o.monitors} devices</span>
+        <button class="ghost small danger" data-forget="${esc(o.id)}">Forget</button></li>`).join("")}</ul>
+      <p class="help">Their device lists, router logins and history are kept and come back when the box is on that network again.</p>` : ""}`;
+  $("#ap-net-name").onsubmit = async (e) => {
+    e.preventDefault();
+    const out = $("#ap-net-result");
+    const j = await netRequest({ type: "rename", network: n.id, name: $("#ap-net-n").value }, out);
+    if (j) { out.hidden = false; out.className = "result good"; out.textContent = `Renamed to ${j.name}.`; setTimeout(refresh, 3000); }
+  };
+  $("#ap-dev-open").onclick = openDevices;
+  $("#ap-dev-open2")?.addEventListener("click", openDevices);
+  $("#ap-wifi")?.addEventListener("click", openWifi);
+  body.querySelectorAll("[data-forget]").forEach((b) => b.addEventListener("click", async () => {
+    const o = NET.networks.find((x) => x.id === b.dataset.forget);
+    if (!o) return;
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = `Forget ${o.name} and its ${o.monitors} devices? Click again`; return; }
+    b.disabled = true;
+    await netRequest({ type: "forget", network: o.id }, $("#ap-net-result"));
+  }));
+}
+
+// ---- device list editor
+let DV_ROWS = [];
+function openDevices() {
+  const n = NET.network, here = NET.networks.find((x) => x.id === n.id) || { rows: [] };
+  DV_ROWS = here.rows.map((r) => ({ ...r }));
+  $("#dv-net").textContent = n.name;
+  const listed = () => new Set(DV_ROWS.map((r) => r.target.split(/[:@/]/).find((p) => /^\d+\.\d+\.\d+\.\d+$/.test(p)) || r.target));
+  const fillFound = () => {
+    const have = listed();
+    $("#dv-found").innerHTML = `<option value="">Choose a device…</option>` + NET.discovered.filter((d) => !d.this_box)
+      .map((d) => `<option value="${esc(d.ip)}"${have.has(d.ip) ? " disabled" : ""}>${esc(d.ip)} · ${esc(d.name || d.vendor || "unnamed")}${d.online ? "" : " (offline)"}${have.has(d.ip) ? " ✓" : ""}</option>`).join("");
+  };
+  fillFound();
+  $("#dv-copy").innerHTML = `<option value="">Choose a network…</option>` + NET.networks.filter((x) => x.id !== n.id && x.rows.length)
+    .map((x) => `<option value="${esc(x.id)}">${esc(x.name)} (${x.rows.length} devices)</option>`).join("");
+  $("#dv-copy").disabled = $("#dv-copy").options.length < 2;
+  const draw = () => {
+    $("#dv-rows").innerHTML = DV_ROWS.map((r, i) => `<tr data-i="${i}">
+      <td><input data-k="group" value="${esc(r.group)}" maxlength="60"></td>
+      <td><input data-k="name" value="${esc(r.name)}" maxlength="80"></td>
+      <td><select data-k="type">${Object.entries(CHECKS).map(([k, v]) => `<option value="${k}"${r.type === k ? " selected" : ""}>${v}</option>`).join("")}</select></td>
+      <td><input data-k="target" value="${esc(r.target)}" spellcheck="false"></td>
+      <td><button type="button" class="ghost small" data-del="${i}" title="Remove">✕</button></td></tr>`).join("")
+      || `<tr><td colspan="5" class="help">No devices yet: add some from the lists above.</td></tr>`;
+    fillFound();
+  };
+  $("#dv-rows").oninput = (e) => { const tr = e.target.closest("tr"); if (tr && e.target.dataset.k) DV_ROWS[+tr.dataset.i][e.target.dataset.k] = e.target.value; };
+  $("#dv-rows").onclick = (e) => { const d = e.target.closest("[data-del]"); if (d) { DV_ROWS.splice(+d.dataset.del, 1); draw(); } };
+  $("#dv-found").onchange = (e) => {
+    const d = NET.discovered.find((x) => x.ip === e.target.value);
+    if (d) DV_ROWS.push({ group: "Devices", name: uniqueName(d.name || d.vendor || `Device ${d.ip}`), type: "ping", target: d.ip, description: d.vendor || "" });
+    draw();
+  };
+  $("#dv-copy").onchange = (e) => {
+    const x = NET.networks.find((o) => o.id === e.target.value);
+    if (x) for (const r of x.rows) if (!DV_ROWS.some((o) => o.name === r.name)) DV_ROWS.push({ ...r });
+    e.target.value = "";
+    draw();
+  };
+  $("#dv-csv-add").onclick = () => {
+    for (const line of $("#dv-csv").value.split(/\r?\n/)) {
+      const t = line.trim();
+      if (!t || t.startsWith("#") || /^group\s*,/i.test(t)) continue;
+      const [group, name, type, target, ...desc] = t.split(",").map((s) => s.trim());
+      if (name && target) DV_ROWS.push({ group: group || "Devices", name: uniqueName(name), type: (type || "ping").toLowerCase(), target, description: desc.join(",") });
+    }
+    $("#dv-csv").value = "";
+    draw();
+  };
+  $("#dv-new").onclick = () => { DV_ROWS.push({ group: "Devices", name: uniqueName("New device"), type: "ping", target: "", description: "" }); draw(); };
+  $("#dv-save").onclick = async () => {
+    const out = $("#dv-result"), btn = $("#dv-save");
+    out.hidden = false; out.className = "result"; out.textContent = "Saving: Uptime Kuma restarts, so this takes about half a minute…";
+    btn.disabled = true;
+    const j = await netRequest({ type: "monitors", network: n.id, rows: DV_ROWS }, out);
+    btn.disabled = false;
+    if (j) { out.className = "result good"; out.textContent = `Saved: ${j.monitors} devices are watched on ${n.name}. The dashboard updates in a minute.`; setTimeout(refresh, 20_000); }
+  };
+  $("#dv-result").hidden = true;
+  draw();
+  $("#devices-dialog").showModal();
+}
+function uniqueName(base) {
+  let n = base, i = 2;
+  while (DV_ROWS.some((r) => r.name === n)) n = `${base} ${i++}`;
+  return n;
+}
+
+// ---- Wi-Fi
+async function openWifi() {
+  const d = $("#wifi-dialog"), out = $("#wf-result");
+  $("#wf-host").textContent = `http://${NET?.hostname || "lanpulse"}.local:8080`;
+  $("#wf-pass").value = "";
+  out.hidden = true;
+  const scan = async () => {
+    $("#wf-ssid").innerHTML = `<option value="">Scanning…</option>`;
+    const j = await netRequest({ type: "wifi_scan" }, out);
+    const nets = j?.networks || [];
+    $("#wf-ssid").innerHTML = nets.length
+      ? nets.map((w) => `<option value="${esc(w.ssid)}" data-open="${w.security === "open" || w.security === "" ? 1 : 0}">${esc(w.ssid)} · signal ${w.signal}%${w.security && w.security !== "open" ? "" : " · no password"}${w.in_use ? " · connected now" : ""}</option>`).join("")
+      : `<option value="">No networks found</option>`;
+  };
+  $("#wf-scan").onclick = scan;
+  $("#wf-show").onclick = () => { const p = $("#wf-pass"); p.type = p.type === "password" ? "text" : "password"; $("#wf-show").textContent = p.type === "password" ? "Show" : "Hide"; };
+  $("#wf-join").onclick = async () => {
+    const ssid = $("#wf-ssid").value;
+    if (!ssid) return;
+    out.hidden = false; out.className = "result"; out.textContent = `Joining ${ssid}…`;
+    $("#wf-join").disabled = true;
+    const j = await netRequest({ type: "wifi_join", ssid, password: $("#wf-pass").value }, out);
+    $("#wf-join").disabled = false;
+    if (j) { out.className = "result good"; out.textContent = `Connected to ${ssid}${j.network ? `: the box is now on ${j.network.name}` : ""}.`; $("#wf-pass").value = ""; }
+  };
+  d.showModal();
+  scan();
 }
 
 loadBoxSettings();
@@ -1058,6 +1240,8 @@ function viewHistory(x) {
         text: e.s === "down" ? `stopped responding${e.msg ? `: ${e.msg}` : ""}` : e.s === "up" ? `back up after ${fmtDur(e.dur_s)}` : "maintenance started" })),
     ...(h.changes || []).map((c) => c.kind === "boot"
       ? { t: c.t, s: "restart", name: c.name, text: `restarted: ${c.msg}. Nothing was checked during that time.` }
+      : c.kind === "network"
+      ? { t: c.t, s: "restart", name: c.name, text: `moved to another network: ${c.msg}. From here on it watches that network's devices.` }
       : { t: c.t, s: c.s === "up" ? "up" : c.s === "down" ? "down" : "warn", name: c.name,
         text: `${label[c.from] || c.from} → ${label[c.s] || c.s}${c.msg ? `: ${c.msg}` : ""}` }),
   ].filter((e) => Date.parse(e.t) >= from && (!q || e.name.toLowerCase().includes(q))).sort((a, b) => b.t.localeCompare(a.t));

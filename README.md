@@ -22,6 +22,8 @@ lanpulse turns a spare laptop or mini-PC into a monitoring box. It wraps proven 
 
 Local-only is the default. Nothing leaves the box unless you turn on a publisher. See [docs/cloud-options.md](docs/cloud-options.md).
 
+**Take it anywhere.** Plug the box into another network and it notices: it recognises each network by its router, points device discovery at it, and switches to that network's own device list, router login, baselines and history (a starter list the first time). Find it at `http://lanpulse.local:8080` whatever address it gets. See [docs/moving-networks.md](docs/moving-networks.md).
+
 **Network health, not just device pings.** The box also checks for rogue DHCP servers, double NAT, ports opened to the internet by UPnP, packet loss, DNS, public IP changes, the Wi-Fi airspace and new devices, with no router password needed. Optional router adapters (ASUS/AiMesh, OpenWrt, UniFi) add wired / 2.4 / 5 / 6 GHz, access point and backhaul details. See [docs/network-checks.md](docs/network-checks.md).
 
 ## Quick start (on the box)
@@ -46,7 +48,7 @@ Optional steps:
 | `sudo /opt/monitor/scripts/kuma-ntfy.sh` | Phone push alerts through [ntfy](https://ntfy.sh). Subscribe to the topic it prints |
 | `sudo /opt/monitor/scripts/kiosk-setup.sh` | Wall screen: a non-admin user logs in automatically and shows the dashboard full screen |
 | `sudo /opt/monitor/scripts/kuma-export.sh > my-site.csv` | Save monitors edited in the web UI back to CSV |
-| `sudo /opt/monitor/scripts/kuma-apply.sh --prune other-site.csv` | Move the box to a different network |
+| `sudo /opt/monitor/scripts/kuma-apply.sh --prune other-site.csv` | Replace the current network's device list from a CSV (the admin view can do this too) |
 
 Keep your site CSVs somewhere private (your own repo or the box). They describe your network.
 

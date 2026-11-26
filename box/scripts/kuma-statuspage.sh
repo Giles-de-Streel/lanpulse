@@ -40,7 +40,7 @@ UPDATE status_page SET title='$(q "$TITLE")', description='$(q "$DESC")', auto_r
 DELETE FROM "group" WHERE status_page_id=(SELECT id FROM status_page WHERE slug='$SLUG');
 INSERT INTO "group" (name, public, active, weight, status_page_id)
   SELECT g.name, 1, 1, g.weight, (SELECT id FROM status_page WHERE slug='$SLUG')
-  FROM monitor g WHERE g.type='group' AND EXISTS (SELECT 1 FROM monitor c WHERE c.parent=g.id)
+  FROM monitor g WHERE g.type='group' AND EXISTS (SELECT 1 FROM monitor c WHERE c.parent=g.id AND c.active=1)
   ORDER BY g.weight;
 INSERT INTO monitor_group (monitor_id, group_id, weight)
   SELECT m.id, sg.id, m.weight

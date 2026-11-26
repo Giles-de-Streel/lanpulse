@@ -325,3 +325,18 @@ body.k-mini .cntp { display: none; }
 .banner .ctime b { font-size: 1.5rem; }
 @media (max-width: 900px) { .banner { flex-wrap: wrap; } .banner .clock { padding-left: 0; } }
 body.k-mini .banner .csync { display: none; }
+
+/* this network (admin view) */
+.net-card { grid-column: 1 / -1; }
+.net-card .setup.invite { margin: 0 0 .8rem; padding: .8rem 1rem; border: 1px solid var(--line); border-left: 6px solid #0f766e; background: var(--bg); }
+.net-card h4 { margin: 1rem 0 .3rem; font-size: .95rem; }
+.net-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .6rem; }
+.netlist { list-style: none; padding: 0; margin: .2rem 0; }
+.netlist li { padding: .35rem 0; border-bottom: 1px solid var(--line); }
+dialog.wide { width: min(900px, 96vw); }
+.dv-add { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 1rem; }
+.dv-add details { grid-column: 1 / -1; margin: .3rem 0 .6rem; }
+.dv-add textarea { width: 100%; font: .85rem ui-monospace, monospace; padding: .5rem; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.dv-table td { padding: .2rem .3rem; }
+.dv-table input, .dv-table select { margin-top: 0 !important; padding: .35rem .45rem !important; min-width: 7rem; }
+#net-info { font-size: .8rem; }

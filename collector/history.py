@@ -184,6 +184,15 @@ def track_changes(snap):
         state = {"last": {}, "events": []}
     now = _now()
     changed = note_boot(state)
+    net = (snap.get("extras") or {}).get("network") or {}
+    if net.get("id") and state.get("network") != net["id"]:
+        if state.get("network"):                   # the box was moved to another network
+            state["events"].append({"t": now, "id": "box-network", "name": "Monitoring box", "s": "moved",
+                                    "from": "up", "kind": "network", "msg": f"now on {net.get('name') or net['id']}"
+                                    + (f" ({net['subnet']})" if net.get("subnet") else "")})
+            state["last"] = {}                     # the other network's statuses don't carry over
+        state["network"] = net["id"]
+        changed = True
     for g in snap.get("groups", []):
         for i in g["items"]:
             if i["id"].startswith("kuma-") or i["id"] in SKIP:
@@ -212,12 +221,14 @@ def history(snap, log=print):
         changes = []
     # Refresh every EVERY seconds, or on every cycle while there's nothing yet (e.g. just after boot,
     # when Uptime Kuma is still starting and the snapshot has no Kuma items).
-    if time.time() - _cache["at"] > EVERY or not _cache["data"]:
+    # Also straight away when the device list changes (the box moved network, or a list was loaded).
+    items = [i for g in snap.get("groups", []) for i in g["items"]]
+    ids = sorted(i["id"] for i in items if i["id"].startswith("kuma-"))
+    if time.time() - _cache["at"] > EVERY or not _cache["data"] or ids != _cache.get("ids"):
         try:
-            items = [i for g in snap.get("groups", []) for i in g["items"]]
             data = kuma_history(items)
             if data:
-                _cache.update(at=time.time(), data=data)
+                _cache.update(at=time.time(), data=data, ids=ids)
         except Exception as e:
             log(f"history: kuma read failed: {e}")
     cutoff = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
