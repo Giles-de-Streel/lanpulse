@@ -31,6 +31,8 @@ button.ghost { background: transparent; color: var(--muted); border: 1px solid v
 .big-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--unknown); flex: none; }
 .banner.up .big-dot { background: var(--up); } .banner.down .big-dot { background: var(--down); animation: pulse 1.6s infinite; }
 .banner.pending .big-dot { background: var(--pending); }
+.banner.checking { border-left-color: var(--maint); background: var(--card); }
+.banner.checking .big-dot { background: var(--maint); animation: pulse 1.6s infinite; }
 #banner-title { font-size: 1.5rem; font-weight: 700; }
 #banner-sub { color: var(--muted); }
 .warning { margin: .75rem 0 0; padding: .7rem 1rem; border-radius: 10px; background: var(--pending-bg); color: var(--text); border: 1px solid var(--pending); }

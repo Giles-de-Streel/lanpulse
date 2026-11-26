@@ -180,13 +180,18 @@ function render(snap) {
   const look = (sum.warn || 0);
   const notes = (snap.groups || []).flatMap((g) => g.items.filter(isNote));
   const warn = (sum.pending || 0) + (sum.unknown || 0);
+  // first scans after a boot or a move to another network: say so instead of "everything is working"
+  const checking = snap.checking || [];
   const banner = $("#banner");
-  banner.className = "banner " + (bad ? "down" : look || warn ? "pending" : "up");
+  banner.className = "banner " + (bad ? "down" : checking.length ? "checking" : look || warn ? "pending" : "up");
   $("#banner-title").textContent = bad
     ? `${bad} ${bad === 1 ? "thing needs" : "things need"} attention`
+    : checking.length ? "Loading – checking the network…"
     : look ? `Working: ${look} ${look === 1 ? "thing" : "things"} to look at when convenient`
     : warn ? "Checking a few things…" : "Everything is working";
-  $("#banner-sub").innerHTML = esc(`${(sum.up || 0) + notes.length} of ${sum.total || 0} working` + (look && bad ? ` · ${look} to look at` : "")) +
+  $("#banner-sub").innerHTML = checking.length && !bad
+    ? esc(`Still running: ${checking.join(", ")}. Usually done within a few minutes of starting up.`)
+    : esc(`${(sum.up || 0) + notes.length} of ${sum.total || 0} working` + (look && bad ? ` · ${look} to look at` : "")) +
     (notes.length ? ` · <a href="#tile-${esc(notes[0].id)}">${notes.length} ${notes.length === 1 ? "note" : "notes"} further down</a> <span class="help">(${esc(notes.map((n) => n.name).join(", "))})</span>` : "");
   // name each real problem in the banner (not the lower-priority notes), with details and a link to its tile
   const flagged = (snap.groups || []).flatMap((g) => g.items.filter((i) => (i.status === "down" || i.status === "warn") && !isNote(i))

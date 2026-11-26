@@ -641,6 +641,46 @@ _last_good = {}      # source name -> (time, part): bridges short outages such a
 STALE_OK = 300
 STARTED = time.time()
 STARTUP_GRACE = 180  # after a reboot or restart, sources (Uptime Kuma) take a minute to answer: not a fault yet
+CHECK_WINDOW = 15 * 60  # "still checking" is only ever said this long after a boot or a move to another network
+SOURCE_LABELS = {"uptime-kuma": "device and service checks", "netcheck": "network health checks",
+                 "router": "router details"}
+
+
+def boot_time():
+    """When the box last started (/proc/stat is the host kernel's, also inside this container)."""
+    try:
+        for line in open("/proc/stat"):
+            if line.startswith("btime "):
+                return int(line.split()[1])
+    except (OSError, ValueError):
+        pass
+    return 0
+
+
+def still_checking(snap):
+    """What's still being checked for the first time since the box started or moved to this network.
+    Until those first scans finish the dashboard says 'loading', not 'everything is working'.
+    Network health results from before then are shown as being re-checked."""
+    net_since = (snap["extras"].get("network") or {}).get("since")
+    since = max(boot_time(), net_since if isinstance(net_since, (int, float)) else 0)
+    if not since or time.time() - since > CHECK_WINDOW:
+        return []
+    what = [SOURCE_LABELS.get(s["name"], s["name"]) for s in snap["sources"] if s.get("starting")]
+    nc = (snap["extras"].get("netcheck") or {}).get("generated")
+    try:
+        nc_old = nc is None or datetime.datetime.fromisoformat(nc).timestamp() < since
+    except ValueError:
+        nc_old = True
+    names = [s.strip() for s in os.environ.get("LANPULSE_SOURCES", "uptime-kuma,netcheck,router").split(",")]
+    if "netcheck" in names and nc_old:
+        if SOURCE_LABELS["netcheck"] not in what:
+            what.append(SOURCE_LABELS["netcheck"])
+        for g in snap["groups"]:
+            for i in g["items"]:
+                if i.get("kind") == "netcheck":
+                    i["status"] = "pending"
+                    i["note"] = "Checking again… last result: " + (i.get("message") or "")
+    return what
 
 
 def build_snapshot():
@@ -688,6 +728,7 @@ def build_snapshot():
     if SITE_DESC:
         snap["site"]["description"] = SITE_DESC
     attach_links(snap)
+    snap["checking"] = still_checking(snap)
     counts = {}
     for g in snap["groups"]:
         # lower-priority findings (new devices, weak Wi-Fi) go to the end of their group
