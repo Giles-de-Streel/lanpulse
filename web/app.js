@@ -538,7 +538,14 @@ async function loadBoxSettings() {
       if (r.ok) {
         BOX = j; renderSetup();
         const need = BOX.router && BOX.router.type !== "none" && !BOX.router.ok;
-        if (params.has("router") || (need && params.has("admin") && !sessionStorage.getItem("lp-router-asked"))) {
+        // ask once: ?router=1 (from the wall screen) is used up straight away, so the prompt
+        // doesn't come back when the page reloads its settings after connecting
+        const asked = params.has("router");
+        if (asked) {
+          params.delete("router");
+          history.replaceState(null, "", `${location.pathname}${params.toString() ? `?${params}` : ""}${location.hash}`);
+        }
+        if ((asked && need) || (need && params.has("admin") && !sessionStorage.getItem("lp-router-asked"))) {
           sessionStorage.setItem("lp-router-asked", "1");
           if (!$("#router-dialog").open) openRouterDialog();
         }
