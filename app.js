@@ -67,6 +67,61 @@ function recount(groups) {
   return s;
 }
 
+// ---------------------------------------------------------------- clock (right of the quick links)
+// Shows this PC's own date and time, ticking, and whether it agrees with internet time.
+// Browsers can't use NTP (UDP), so the box queries public NTP servers (extras.time) and the page
+// compares the PC with the box using the server's Date header (1-second resolution, so differences
+// under ~2 s count as "matches").
+const CLOCK = { pcVsServer: null, measuredAt: 0, timer: null, el: null };
+async function measurePcOffset() {
+  if (Date.now() - CLOCK.measuredAt < 5 * 60_000 && CLOCK.pcVsServer != null) return;
+  try {
+    const t0 = Date.now();
+    const r = await fetch(`./?clock=${t0}`, { method: "HEAD", cache: "no-store" });
+    const t1 = Date.now(), d = Date.parse(r.headers.get("date"));
+    if (!isNaN(d)) { CLOCK.pcVsServer = d + 500 - (t0 + t1) / 2; CLOCK.measuredAt = t1; }   // server time - PC time, ms
+  } catch { /* offline: just show the PC clock */ }
+}
+function renderClock(x) {
+  let el = CLOCK.el;   // one element and one timer, re-attached after the quick links are rebuilt
+  if (!el) {
+    el = CLOCK.el = document.createElement("div");
+    el.id = "clock";
+    el.className = "clock";
+    el.innerHTML = `<div class="ctime"><b id="c-time"></b><span id="c-date"></span></div><div id="c-sync" class="csync"></div><div id="c-ntp" class="cntp"></div>`;
+    $("#quick").append(el);
+    const tick = () => {
+      const n = new Date();
+      el.querySelector("#c-time").textContent = n.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" });
+      el.querySelector("#c-date").textContent = n.toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+    };
+    tick();
+    CLOCK.timer = setInterval(tick, 1000);
+  }
+  if (el.parentElement !== $("#quick")) $("#quick").append(el);
+  const t = x.time;
+  measurePcOffset().then(() => {
+    const sync = $("#c-sync");
+    const box = t?.box_offset_ms;                       // + means the box is behind internet time
+    if (CLOCK.pcVsServer == null) { sync.textContent = "This PC's clock"; sync.className = "csync"; }
+    else {
+      // PC vs internet time = (server - PC) + (internet - server box), when the page comes from the box
+      const fromBox = location.port === "8080" || !onPages;
+      const off = (CLOCK.pcVsServer + (fromBox && box != null ? box : 0)) / 1000;   // + means the PC is behind
+      const a = Math.abs(off);
+      sync.className = "csync " + (a < 2 ? "ok" : a < 30 ? "warn" : "bad");
+      sync.textContent = a < 2 ? "This PC's clock · matches internet time"
+        : `This PC's clock is ${a < 90 ? `${Math.round(a)} s` : fmtDur(a)} ${off > 0 ? "slow" : "fast"}`;
+    }
+    const ntp = $("#c-ntp");
+    if (!t?.servers?.length) { ntp.innerHTML = ""; return; }
+    const okN = t.servers.filter((s) => s.ok).length;
+    ntp.innerHTML = `Internet time (NTP): ` + t.servers.map((s) =>
+      `<span class="${s.ok ? "ok" : "bad"}" title="${esc(s.ok ? `answered in ${Math.round(s.rtt_ms)} ms; box clock ${s.offset_ms >= 0 ? "behind" : "ahead"} by ${Math.abs(s.offset_ms)} ms; stratum ${s.stratum}` : `no answer: ${s.error || ""}`)}">${esc(s.host)} ${s.ok ? "✓" : "✗"}</span>`).join(" · ") +
+      (box != null ? ` <span class="help" title="checked ${esc(ago(t.at))}">· box clock ${Math.abs(box) < 500 ? "in sync" : `off by ${(Math.abs(box) / 1000).toFixed(1)} s`}${okN < t.servers.length ? ` · ${t.servers.length - okN} not answering` : ""}</span>` : "");
+  });
+}
+
 function renderQuick(items, x) {
   const el = $("#quick");
   const label = (i) => {
@@ -92,6 +147,7 @@ function renderQuick(items, x) {
     el.insertAdjacentHTML("beforeend", `<a class="qbtn" href="${viewHref("history")}"${KIOSK ? "" : ` target="_blank" rel="noopener"`}>
       <b>History</b><span>${n ? `${n} outage${n === 1 ? "" : "s"} in 24 h` : "no outages in 24 h"}</span><i aria-hidden="true">↗</i></a>`);
   }
+  renderClock(x);
   el.hidden = !el.children.length;
 }
 
