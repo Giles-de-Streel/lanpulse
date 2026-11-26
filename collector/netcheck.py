@@ -715,6 +715,51 @@ HINTS = {
 
 # ------------------------------------------------------------------ main
 
+NTP_EPOCH = 2208988800      # seconds between 1900 (NTP) and 1970 (Unix)
+
+
+def _ntp_ts(b):
+    sec, frac = int.from_bytes(b[:4], "big"), int.from_bytes(b[4:8], "big")
+    return sec - NTP_EPOCH + frac / 2**32
+
+
+def ntp_query(host, timeout=2.0):
+    """One SNTP request. Returns (offset_s, round_trip_s, stratum): how far this box's clock is
+    from the server (positive = the box is behind)."""
+    import socket
+    addr = socket.getaddrinfo(host, 123, 0, socket.SOCK_DGRAM)[0]
+    with socket.socket(addr[0], socket.SOCK_DGRAM) as s:
+        s.settimeout(timeout)
+        t1 = time.time()
+        s.sendto(b"\x23" + 47 * b"\0", addr[4])            # LI 0, version 4, mode 3 (client)
+        data, _ = s.recvfrom(512)
+        t4 = time.time()
+    if len(data) < 48:
+        raise ValueError("short reply")
+    stratum = data[1]
+    if stratum == 0:
+        raise ValueError("server refused (kiss-o'-death)")
+    t2, t3 = _ntp_ts(data[32:40]), _ntp_ts(data[40:48])
+    return ((t2 - t1) + (t3 - t4)) / 2, (t4 - t1) - (t3 - t2), stratum
+
+
+def time_sources():
+    """Compare this box's clock with a few free public NTP servers (NETCHECK_NTP_SERVERS)."""
+    hosts = [h.strip() for h in env("NETCHECK_NTP_SERVERS",
+             "time.cloudflare.com,time.google.com,pool.ntp.org,time.nist.gov,time.windows.com").split(",") if h.strip()]
+    out = []
+    for h in hosts:
+        try:
+            off, rtt, stratum = ntp_query(h)
+            out.append({"host": h, "ok": True, "offset_ms": round(off * 1000, 1), "rtt_ms": round(rtt * 1000, 1), "stratum": stratum})
+        except Exception as e:
+            out.append({"host": h, "ok": False, "error": str(e)[:80]})
+    good = sorted(s["offset_ms"] for s in out if s["ok"])
+    median = good[len(good) // 2] if good else None
+    return {"at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+            "servers": out, "box_offset_ms": median}
+
+
 def main():
     gw, dev = default_route()
     try:
@@ -759,6 +804,11 @@ def main():
     exposure = {"upnp": upnp, "public_ip": next((c["detail"].get("ip") for c in checks if c["id"] == "publicip"), None),
                 "nat": next((c["summary"] for c in checks if c["id"] == "nat"), None)}
     extras["exposure"] = exposure
+    if enabled("ntp"):
+        try:
+            extras["time"] = time_sources()
+        except Exception as e:
+            print(f"ntp: {e}", file=sys.stderr)
     for c in checks:
         if c["status"] in ("warn", "down") and c["id"] in HINTS:
             c["hint"] = HINTS[c["id"]]
