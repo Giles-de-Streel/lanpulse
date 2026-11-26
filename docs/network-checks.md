@@ -96,3 +96,12 @@ otherwise leave only a silent gap. On start-up the collector compares the machin
 timeline gets a "Monitoring box restarted" entry saying how long monitoring was paused (time since the
 last snapshot before the reboot). Gaps over 15 minutes are flagged as a possible power cut or switch-off.
 Restarting only the collector (updates) is not logged.
+
+## Clock
+
+The status banner shows the viewing PC's own date and time (ticking) and whether that clock matches
+internet time. Browsers can't use NTP, so every network check the box queries public NTP servers
+(`NETCHECK_NTP_SERVERS`, default time.cloudflare.com, time.google.com, pool.ntp.org, time.nist.gov,
+time.windows.com; `NETCHECK_NTP=0` turns it off) and records its own offset in `extras.time`. The page
+compares the PC with the server through the HTTP `Date` header (1-second resolution), so a PC within
+about 2 s counts as matching. Hover a server name for its answer time and offset.
