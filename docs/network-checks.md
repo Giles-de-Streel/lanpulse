@@ -87,3 +87,12 @@ The admin view has a **Phone alerts** card with links to the free ntfy app (Goog
 App Store), the topic and server to subscribe to (read from Uptime Kuma's ntfy notification), a Copy
 button, and **Send a test alert**. The topic is shown only to a signed-in administrator, because on a
 public ntfy server anyone who knows the topic can read the alerts.
+
+### Box restarts
+
+The box can't check anything while it is off or restarting, so a reboot, crash or power cut would
+otherwise leave only a silent gap. On start-up the collector compares the machine's boot time
+(`/proc/stat`, shared with the host) with the one it saved last time; if it changed, the History
+timeline gets a "Monitoring box restarted" entry saying how long monitoring was paused (time since the
+last snapshot before the reboot). Gaps over 15 minutes are flagged as a possible power cut or switch-off.
+Restarting only the collector (updates) is not logged.
