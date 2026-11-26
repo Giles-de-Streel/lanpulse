@@ -304,3 +304,19 @@ body.kiosk .qbtn { font-size: .95rem; padding: .45rem 1rem; }
   .qbtn span { color: #a9c9c4; }
   .qbtn:hover { background: #173b37; }
 }
+
+/* clock to the right of the quick links */
+.quick { align-items: center; }
+.clock { margin-left: auto; text-align: right; line-height: 1.3; min-width: 0; }
+.ctime b { font-size: 1.35rem; font-variant-numeric: tabular-nums; margin-right: .5rem; }
+.ctime span { color: var(--muted); font-size: .95rem; }
+.csync { font-size: .85rem; color: var(--muted); }
+.csync.ok::before { content: "✓ "; color: var(--up); }
+.csync.warn { color: var(--pending); font-weight: 600; }
+.csync.bad { color: var(--down); font-weight: 600; }
+.cntp { font-size: .78rem; color: var(--muted); }
+.cntp .ok { color: var(--text); }
+.cntp .bad { color: var(--down); }
+.cntp span[title] { cursor: help; }
+@media (max-width: 900px) { .clock { margin-left: 0; text-align: left; flex-basis: 100%; } }
+body.k-mini .cntp { display: none; }

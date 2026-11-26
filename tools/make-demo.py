@@ -281,6 +281,12 @@ for g in groups:
         history_monitors.append({"id": it["id"], "name": it["name"], "daily": buckets(outs, 86400, 30),
                                  "hourly": buckets(outs, 3600, 48), "outages": olist})
 history_events.sort(key=lambda e: e["t"])
+extras["time"] = {"at": ago(minutes=4), "box_offset_ms": -2.1, "servers": [
+    {"host": "time.cloudflare.com", "ok": True, "offset_ms": -1.8, "rtt_ms": 14.2, "stratum": 3},
+    {"host": "time.google.com", "ok": True, "offset_ms": -2.1, "rtt_ms": 18.9, "stratum": 1},
+    {"host": "pool.ntp.org", "ok": True, "offset_ms": 0.9, "rtt_ms": 41.5, "stratum": 2},
+    {"host": "time.nist.gov", "ok": True, "offset_ms": -2.6, "rtt_ms": 33.0, "stratum": 1},
+    {"host": "time.windows.com", "ok": True, "offset_ms": -6.3, "rtt_ms": 47.7, "stratum": 4}]}
 extras["history"] = {
     "from": ago(days=45), "monitors": history_monitors, "events": history_events,
     "changes": [
