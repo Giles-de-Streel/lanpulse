@@ -3,12 +3,14 @@
 Runs on the box (as root, from netcheck.py). Clues, best first:
   - mDNS / Bonjour announcements (avahi-browse): Fire TV "kitchen", Chromecast "Living room", printers, AirPlay
   - UPnP / SSDP descriptions: friendly name, maker and model (Roku TVs, smart TVs, media servers)
+  - the security certificate on its web ports (443/8443): Blink Sync Modules, Ring and others name
+    themselves there even though their network chip only says "Amazon" (cached per device for a week)
   - an nmap OS fingerprint for devices that announce nothing (cached per device for a week)
   - the maker of the network chip (from the MAC address), translated into plain words
 Each device gets "hint" (a short "probably ..." label) and "clues" (the evidence, for the details view).
 Nothing here changes the device; it only listens and asks politely.
 """
-import json, os, re, socket, subprocess, time, urllib.request
+import json, os, re, socket, ssl, subprocess, time, urllib.request
 
 MDNS_KINDS = {   # service type -> (what it means, TXT key holding a friendly name, TXT key holding a model)
     "_amzn-wplay._tcp": ("Fire TV", "n", None),
@@ -34,7 +36,7 @@ MDNS_CLUES = {   # service types that are worth mentioning but don't say what th
     "_ssh._tcp": "accepts SSH logins", "_http._tcp": "has a web page", "_device-info._tcp": None,
 }
 VENDOR_HINTS = [   # maker of the network chip (lower-case prefix) -> plain words
-    ("amazon", "Amazon device (Echo, Fire TV, Ring or Kindle)"), ("shenzhen intellirocks", "Govee smart light"),
+    ("amazon", "Amazon device (Echo, Fire TV, Ring, Blink or Kindle)"), ("immedia", "Blink camera or Sync Module"), ("shenzhen intellirocks", "Govee smart light"),
     ("espressif", "smart-home gadget (Espressif Wi-Fi chip)"), ("tuya", "Tuya smart plug or bulb"),
     ("ring llc", "Ring doorbell or camera"), ("google", "Google / Nest device"), ("nest labs", "Nest device"),
     ("apple", "Apple device"), ("samsung", "Samsung device"), ("roku", "Roku"), ("sonos", "Sonos speaker"),
@@ -156,6 +158,50 @@ def os_scan(ips):
     return res
 
 
+CERT_HINTS = [   # text in the certificate's subject or issuer (lower-case) -> plain words; first match wins
+    (".sm.blink.com", "Blink Sync Module (hub for Blink cameras)"), ("blink", "Blink camera or Sync Module"),
+    ("immedia-semi", "Blink camera or Sync Module"), ("ring.com", "Ring doorbell or camera"),
+    ("amazon", None), ("unifi", "UniFi network equipment"), ("ubiquiti", "Ubiquiti network equipment"),
+    ("synology", "Synology storage (NAS)"), ("qnap", "QNAP storage (NAS)"), ("hikvision", "Hikvision camera or recorder"),
+    ("dahua", "Dahua camera or recorder"), ("reolink", "Reolink camera"), ("axis", "Axis camera"),
+    ("hewlett", "HP printer"), ("brother", "Brother printer"), ("epson", "Epson printer"), ("canon", "Canon printer"),
+    ("sonos", "Sonos speaker"), ("philips hue", "Philips Hue bridge"), ("ecobee", "ecobee thermostat"),
+]
+CERT_TTL, CERT_PER_RUN = 7 * 86400, 8
+
+
+def _cert_names(ip, port):
+    """(subject, issuer) of the certificate on ip:port, or None. Reads it without trusting or sending anything."""
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname, ctx.verify_mode = False, ssl.CERT_NONE
+        with socket.create_connection((ip, port), timeout=2) as raw, ctx.wrap_socket(raw) as s:
+            der = s.getpeercert(binary_form=True)
+        out = subprocess.run(["openssl", "x509", "-noout", "-subject", "-issuer", "-nameopt", "oneline"],
+                             input=ssl.DER_cert_to_PEM_cert(der).encode(), capture_output=True, timeout=5).stdout.decode()
+        f = dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
+        return f.get("subject", "").strip(), f.get("issuer", "").strip()
+    except Exception:
+        return None
+
+
+def cert_scan(ip):
+    """{"cn": ..., "org": ..., "text": ...} from the first certificate found on 443 or 8443, preferring one that names a maker."""
+    best = None
+    for port in (8443, 443):
+        names = _cert_names(ip, port)
+        if not names:
+            continue
+        subj, iss = names
+        cn = (re.search(r"CN\s*=\s*([^,/]+)", subj) or [None, None])[1]
+        org = (re.search(r"O\s*=\s*([^,/]+)", subj) or re.search(r"O\s*=\s*([^,/]+)", iss) or [None, None])[1]
+        found = {"cn": cn and cn.strip(), "org": org and org.strip(), "text": f"{subj} {iss}".lower(), "port": port}
+        if plain(CERT_HINTS, found["text"]):
+            return found
+        best = best or found
+    return best
+
+
 def plain(table, text):
     t = (text or "").lower()
     return next((words for key, words in table if key in t), None)
@@ -176,6 +222,10 @@ def identify(devs, state):
         cache[mac] = {"t": now, "os": fp}
     for d in need:                              # no answer: remember that too, so it isn't re-scanned every run
         cache.setdefault(d["mac"], {"t": now, "os": None})
+    certs = state.setdefault("identify_cert", {})
+    for d in [d for d in online if not d.get("name") and not d.get("this_box") and d["ip"] not in ssdp
+              and now - (certs.get(d["mac"]) or {}).get("t", 0) > CERT_TTL][:CERT_PER_RUN]:
+        certs[d["mac"]] = {"t": now, "cert": cert_scan(d["ip"])}
     for d in online:
         clues, label = [], None
         m, u = mdns.get(d["ip"]), ssdp.get(d["ip"])
@@ -198,6 +248,11 @@ def identify(devs, state):
                 label = "Amazon Echo (smart speaker)"       # Fire TVs announce themselves above
             if not label and "Matter smart-home device" in m["clues"]:
                 label = "Matter smart-home device"
+        cert = (certs.get(d["mac"]) or {}).get("cert")
+        if cert:
+            who = cert.get("org") or cert.get("cn")
+            clues.append(f"security certificate from {who}" + (f" ({cert['cn']})" if cert.get("cn") and cert["cn"] != who else ""))
+            label = label or plain(CERT_HINTS, cert["text"])
         fp = (cache.get(d["mac"]) or {}).get("os")
         if fp:
             clues.append(f"network fingerprint: {fp}")
