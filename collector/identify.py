@@ -277,6 +277,7 @@ def identify(devs, state):
         if inf.get("duid"):
             duids.setdefault(inf["duid"], []).append(mac)
     by_mac = {(x.get("mac") or "").lower(): x for x in devs}
+    rnames = router_names()
     cache = state.setdefault("identify_os", {})
     need = [d for d in online if not d.get("name") and not d.get("this_box") and d["ip"] not in mdns
             and d["ip"] not in ssdp and now - (cache.get(d["mac"]) or {}).get("t", 0) > OS_TTL][:OS_PER_RUN]
@@ -342,6 +343,17 @@ def identify(devs, state):
         known = match_hint(HOST_HINTS, d.get("name")) if d.get("name") else None
         if known:
             cands.append((3.2, known))          # below its own announcements, which can add a room name
+        rn = rnames.get(d["mac"].lower()) if not d.get("name") else None
+        if rn:                                  # the device finder has no name for it, but the router does
+            clues.append(f'the router knows it as "{rn}"')
+            k = match_hint(HOST_HINTS, rn)
+            twin = next((o for o in online if o is not d and rn.lower() in
+                         ((o.get("name") or "").lower(), (rnames.get(o["mac"].lower()) or "").lower())), None)
+            if twin:                            # e.g. two "Tesla_Model_3": the car, and something that borrowed its name
+                clues.append(f"{twin['ip']} uses the same name")
+                cands.append((3.3, f"{k} accessory or second connection" if k else f'second device named "{rn}"'))
+            else:
+                cands.append((3.2, k) if k else (9, f'device the router calls "{rn}"'))
         if u:
             what = " ".join(x for x in (u.get("maker"), u.get("model")) if x)
             clues.append(f"describes itself as {u.get('name') or what}" + (f" ({what})" if u.get("name") and what else ""))
@@ -406,6 +418,15 @@ def identify(devs, state):
             d["hint"] = min(cands, key=lambda c: c[0])[1]
         if clues:
             d["clues"] = clues
+
+
+def router_names():
+    """{mac: name} from the router's client list (the collector saves it in the snapshot)."""
+    try:
+        snap = json.load(open(os.path.join(os.environ.get("APP", "/opt/monitor"), "data", "snapshot.json")))
+        return {(c.get("mac") or "").lower(): c["name"] for c in (snap.get("extras") or {}).get("clients") or [] if c.get("name")}
+    except (OSError, ValueError, AttributeError):
+        return {}
 
 
 def discover_scan():
