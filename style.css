@@ -429,6 +429,7 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 .dt-sub { color: var(--muted); font-size: .78rem; margin-top: .1rem; white-space: normal; }
 .dt-addr .dt-sub { font-size: .74rem; white-space: nowrap; }
 .dt-seen .dt-sub { white-space: nowrap; }
+.dt-clues { color: var(--muted); font-size: .72rem; margin-top: .15rem; white-space: normal; opacity: .85; }
 /* rename button and "which one is it?" panel */
 .rn-btn { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 0 .2rem; font-size: .9em; opacity: .55; }
 .rn-btn:hover, .rn-btn:focus-visible { opacity: 1; color: var(--text); }
