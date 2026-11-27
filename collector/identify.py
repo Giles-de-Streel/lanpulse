@@ -303,6 +303,8 @@ def identify(devs, state):
             os_words = plain(OS_HINTS, fp)
             if os_words:
                 cands.append((10 if os_words != "Linux-based device" else 12, os_words))
+            elif not re.match(r"(linux|microsoft|windows|apple|mac os|freebsd|openbsd|netbsd|android|vxworks|embedded)", fp, re.I):
+                cands.append((10.5, fp))         # a named product, e.g. "OSRAM Lightify ZigBee gateway"
         vendor_words = plain(VENDOR_HINTS, d.get("vendor"))
         if d.get("vendor") and d["vendor"] not in ("Private",) and not d["vendor"].startswith("("):
             clues.append(f"network chip made by {d['vendor']}")

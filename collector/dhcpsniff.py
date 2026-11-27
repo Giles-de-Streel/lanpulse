@@ -57,6 +57,8 @@ def parse(frame):
     if len(bootp) < 240 or bootp[0] != 1 or bootp[236:240] != b"\x63\x82\x53\x63":
         return None
     mac = ":".join(f"{b:02x}" for b in bootp[28:34])
+    if mac == "de:ad:c0:de:ca:fe":                    # nmap's test request (the box's own rogue-DHCP check)
+        return None
     opts, i = {}, 240
     while i < len(bootp):
         code = bootp[i]
