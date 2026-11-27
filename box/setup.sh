@@ -42,7 +42,8 @@ install -m 644 "$BOX/docker-compose.yml" "$BOX/Caddyfile" "$APP/"
 install -m 755 "$BOX"/scripts/*.sh "$APP/scripts/"
 rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/"
 install -m 644 "$REPO"/collector/collector.py "$REPO"/collector/netcheck.py "$REPO"/collector/history.py \
-  "$REPO"/collector/netswitch.py "$REPO"/collector/identify.py "$REPO"/collector/alerts.py "$REPO"/collector/boxhealth.py "$APP/collector/"
+  "$REPO"/collector/netswitch.py "$REPO"/collector/identify.py "$REPO"/collector/alerts.py "$REPO"/collector/boxhealth.py \
+  "$REPO"/collector/dhcpsniff.py "$APP/collector/"
 [ -f "$APP/lanpulse.env" ] || install -m 600 "$BOX/lanpulse.env.example" "$APP/lanpulse.env"
 # older installs: turn on the netcheck and router sources (router stays idle until ROUTER_TYPE is set)
 sed -i 's/^LANPULSE_SOURCES=uptime-kuma$/LANPULSE_SOURCES=uptime-kuma,netcheck,router/' "$APP/lanpulse.env"
@@ -118,7 +119,25 @@ esac
 EOF
   chmod 755 /etc/NetworkManager/dispatcher.d/90-lanpulse
 fi
+echo "== device identification: listen for DHCP requests (hostname, vendor tag) - listens only"
+cat > /etc/systemd/system/lanpulse-dhcpsniff.service <<EOF
+[Unit]
+Description=lanpulse: remember what devices say about themselves when they join (DHCP)
+After=network-online.target
+
+[Service]
+Environment=APP=$APP
+ExecStart=$PY $APP/collector/dhcpsniff.py
+Restart=always
+RestartSec=10
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
 systemctl daemon-reload
+systemctl enable lanpulse-dhcpsniff.service >/dev/null 2>&1
+systemctl restart lanpulse-dhcpsniff.service      # picks up a new dhcpsniff.py
 systemctl enable --now lanpulse-netcheck.timer lanpulse-requests.path >/dev/null 2>&1
 systemctl start --no-block lanpulse-netcheck.service
 cd "$APP"
