@@ -443,17 +443,22 @@ html.kiosk::-webkit-scrollbar { display: none; }
 html.kiosk .sd-list { scrollbar-width: auto; }
 
 /* connection checks (Router, Internet, Name lookups) as chips inside the status banner */
-.banner .bnet { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .55rem; }
-.bnet-item { display: grid; grid-template-columns: auto auto; column-gap: .45rem; align-items: center; text-align: left;
-             padding: .45rem .75rem; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
-.bnet-item i { grid-row: span 2; width: 12px; height: 12px; border-radius: 50%; background: var(--unknown); }
-.bnet-item b { font-size: .95rem; }
-.bnet-item span { font-size: .8rem; color: var(--muted); }
-.bnet-item.up i { background: var(--up); }
-.bnet-item.down { border-color: var(--down); background: var(--down-bg); }
-.bnet-item.down i { background: var(--down); animation: pulse 1.6s infinite; }
-.bnet-item.warn i, .bnet-item.pending i { background: var(--pending); }
-.bnet-item.maintenance i { background: var(--maint); }
-.bnet-item:hover { border-color: #0f766e; }
-body.k-mini .bnet-item { padding: .3rem .55rem; }
-body.k-mini .bnet-item span { display: none; }
+.banner .bnet { flex: 1; display: flex; justify-content: center; gap: 1.6rem; align-self: center; }
+.banner .bnet + .clock { margin-left: 0; }
+.bnet-item { display: flex; flex-direction: column; align-items: center; gap: .3rem; padding: .2rem; background: none; color: var(--text); border: 0; }
+.bnet-item b { font-size: .9rem; }
+/* pie: status colour for the share of 24 h it was working, red for the rest; hole in the middle for the reading */
+.bnet-item .pie { --c: var(--up); width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+                  background: conic-gradient(var(--c) calc(var(--share) * 1turn), var(--down) 0); }
+.bnet-item .pie > span { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; align-content: center;
+                         background: var(--card); font-weight: 700; font-size: .95rem; line-height: 1; }
+.bnet-item .pie small { font-size: .65rem; font-weight: 500; color: var(--muted); }
+.bnet-item.warn .pie, .bnet-item.pending .pie { --c: var(--pending); }
+.bnet-item.maintenance .pie { --c: var(--maint); }
+.bnet-item.unknown .pie { --c: var(--unknown); }
+.bnet-item.down .pie { animation: pulse 1.6s infinite; }
+.bnet-item.down .pie > span { color: var(--down); }
+.bnet-item:hover .pie { box-shadow: 0 0 0 3px #0f766e55; }
+body.k-mini .bnet-item .pie { width: 48px; height: 48px; }
+body.k-mini .bnet-item .pie > span { width: 36px; height: 36px; font-size: .8rem; }
+@media (max-width: 900px) { .banner .bnet { flex-basis: 100%; justify-content: flex-start; } }
