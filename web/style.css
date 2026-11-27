@@ -441,3 +441,21 @@ html.kiosk { scrollbar-width: none; }
 html.kiosk::-webkit-scrollbar { display: none; }
 .sd-list { scrollbar-gutter: stable; }
 html.kiosk .sd-list { scrollbar-width: auto; }
+
+/* connection checks (Router, Internet, Name lookups) as chips inside the status banner */
+.banner .bnet { margin-left: auto; display: flex; flex-wrap: wrap; gap: .5rem; align-self: center; justify-content: flex-end; }
+.banner .bnet + .clock { margin-left: 0; }
+.bnet-item { display: grid; grid-template-columns: auto auto; column-gap: .45rem; align-items: center; text-align: left;
+             padding: .45rem .75rem; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
+.bnet-item i { grid-row: span 2; width: 12px; height: 12px; border-radius: 50%; background: var(--unknown); }
+.bnet-item b { font-size: .95rem; }
+.bnet-item span { font-size: .8rem; color: var(--muted); }
+.bnet-item.up i { background: var(--up); }
+.bnet-item.down { border-color: var(--down); background: var(--down-bg); }
+.bnet-item.down i { background: var(--down); animation: pulse 1.6s infinite; }
+.bnet-item.warn i, .bnet-item.pending i { background: var(--pending); }
+.bnet-item.maintenance i { background: var(--maint); }
+.bnet-item:hover { border-color: #0f766e; }
+body.k-mini .bnet-item { padding: .3rem .55rem; }
+body.k-mini .bnet-item span { display: none; }
+@media (max-width: 900px) { .banner .bnet { margin-left: 0; flex-basis: 100%; justify-content: flex-start; } }
