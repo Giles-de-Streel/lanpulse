@@ -201,9 +201,9 @@ function renderBannerNet(core) {
     el.className = "bnet";
     el.setAttribute("aria-label", "Connection checks");
   }
-  // between the status text and the clock
-  const clock = $("#clock");
-  if (el.parentElement !== $("#banner") || el.nextElementSibling !== clock) $("#banner").insertBefore(el, clock && clock.parentElement === $("#banner") ? clock : null);
+  // one row under the status text ("20 of 20 working"), above any listed problems
+  const sub = $("#banner-sub");
+  if (sub.nextElementSibling !== el) sub.after(el);
   el.innerHTML = core.items.map((i) => {
     const what = i.status === "up" ? (i.latency_ms != null ? `${Math.round(i.latency_ms)} ms` : "Working") : (LABEL[i.status] || i.status);
     return `<button type="button" class="bnet-item ${esc(i.status)}" data-item="${esc(i.id)}" title="${esc(i.message || i.note || "")}">
