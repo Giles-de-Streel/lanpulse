@@ -187,6 +187,30 @@ function renderQuick(items, x) {
   el.hidden = !el.children.length;
 }
 
+// Group placement: equipment at the top, the monitoring box itself at the bottom, the rest in between.
+const gOrder = (g) => (g.name === "Network equipment" ? 0 : g.name === "Monitoring box" ? 2 : 1);
+// The basic connection group (the box's starter list calls it "Network"; the demo calls it "Internet")
+// is shown as a row of small status chips inside the banner instead of as tiles.
+const CORE_GROUPS = ["Network", "Internet"];
+function renderBannerNet(core) {
+  let el = $("#banner-net");
+  if (!core) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "banner-net";
+    el.className = "bnet";
+    el.setAttribute("aria-label", "Connection checks");
+  }
+  // between the status text and the clock
+  const clock = $("#clock");
+  if (el.parentElement !== $("#banner") || el.nextElementSibling !== clock) $("#banner").insertBefore(el, clock && clock.parentElement === $("#banner") ? clock : null);
+  el.innerHTML = core.items.map((i) => {
+    const what = i.status === "up" ? (i.latency_ms != null ? `${Math.round(i.latency_ms)} ms` : "Working") : (LABEL[i.status] || i.status);
+    return `<button type="button" class="bnet-item ${esc(i.status)}" data-item="${esc(i.id)}" title="${esc(i.message || i.note || "")}">
+      <i aria-hidden="true"></i><b>${esc(i.name)}</b><span>${esc(what)}</span></button>`;
+  }).join("");
+}
+
 function render(snap) {
   if (VIEW) { LAST_SNAP = snap; renderView(snap); document.documentElement.dataset.booted = "1"; return; }
   LAST_SNAP = snap;
@@ -245,8 +269,12 @@ function render(snap) {
   const flagged = (snap.groups || []).flatMap((g) => g.items.filter((i) => (i.status === "down" || i.status === "warn") && !isNote(i))
     .map((i) => ({ ...i, group: g.name })));
   const list = $("#banner-list");
+  // the basic connection checks (Router, Internet, Name lookups) sit inside the banner, not as a group of tiles
+  const core = (snap.groups || []).find((g) => CORE_GROUPS.includes(g.name) && g.items.length <= 4);
+  const coreIds = new Set(core ? core.items.map((i) => i.id) : []);
+  renderBannerNet(core);
   list.innerHTML = flagged.slice(0, 8).map((i) =>
-    `<li class="${i.status}"><a href="#tile-${esc(i.id)}"><b>${esc(i.name)}</b></a>${i.note || i.message ? `: ${esc(i.note || i.message)}` : ` (${esc(i.group)})`} <button type="button" class="ghost small more-btn" data-item="${esc(i.id)}">Details…</button>${i.hint ? `<br><span class="hint">${esc(i.hint)}</span>` : ""}</li>`).join("");
+    `<li class="${i.status}"><a href="${coreIds.has(i.id) ? "#banner" : `#tile-${esc(i.id)}`}"><b>${esc(i.name)}</b></a>${i.note || i.message ? `: ${esc(i.note || i.message)}` : ` (${esc(i.group)})`} <button type="button" class="ghost small more-btn" data-item="${esc(i.id)}">Details…</button>${i.hint ? `<br><span class="hint">${esc(i.hint)}</span>` : ""}</li>`).join("");
   list.hidden = !flagged.length;
 
   const groups = $("#groups");
@@ -254,8 +282,10 @@ function render(snap) {
   // wall screen: groups with problems move to the top (down first, then things to look at)
   const gRank = (g) => (g.items.some((i) => i.status === "down") ? 0
     : g.items.some((i) => i.status === "warn" && !isNote(i)) ? 1 : 2);
-  const ordered = KIOSK ? [...(snap.groups || [])].map((g, n) => [g, n]).sort((a, b) => gRank(a[0]) - gRank(b[0]) || a[1] - b[1]).map((x) => x[0])
-                        : (snap.groups || []);
+  // network equipment first, the monitoring box's own checks last; wall screen: problems first of all
+  const ordered = (snap.groups || []).filter((g) => g !== core).map((g, n) => [g, n])
+    .sort((a, b) => (KIOSK ? gRank(a[0]) - gRank(b[0]) : 0) || gOrder(a[0]) - gOrder(b[0]) || a[1] - b[1]).map((x) => x[0]);
+  if (core) core.items.forEach((i) => ITEMS.set(i.id, { ...i, group: core.name }));   // their Details pop-ups
   for (const g of ordered) {
     const sec = document.createElement("section");
     const gBad = g.items.filter((i) => i.status === "down").length;
