@@ -344,6 +344,9 @@ def identify(devs, state):
         if known:
             cands.append((3.2, known))          # below its own announcements, which can add a room name
         rn = rnames.get(d["mac"].lower()) if not d.get("name") else None
+        if rn and (rn.lower() == (d.get("vendor") or "").lower() or     # some routers show the maker as the name
+                   re.search(r"\b(inc|corp|corporation|ltd|llc|co|gmbh|technologies|limited)\.?$", rn, re.I)):
+            rn = None
         if rn:                                  # the device finder has no name for it, but the router does
             clues.append(f'the router knows it as "{rn}"')
             k = match_hint(HOST_HINTS, rn)
