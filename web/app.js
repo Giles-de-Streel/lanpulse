@@ -1728,7 +1728,7 @@ if (KIOSK && !VIEW) {
   setInterval(check, 60_000);
 }
 
-// Hover details for devices (maker, MAC, how it was identified). The browser's own tooltips vanish
+// Hover details for every tooltip on the page (devices, tiles, banner). The browser's own tooltips vanish
 // after a few seconds; this one stays while the pointer is on the row or on the pop-up itself.
 const HOVERTIP = { el: null, anchor: null, hide: 0 };
 function showTip(a) {
@@ -1752,7 +1752,12 @@ function showTip(a) {
 document.addEventListener("pointermove", (e) => {
   const t = e.target instanceof Element ? e.target : null;
   if (t && HOVERTIP.el && HOVERTIP.el.contains(t)) { clearTimeout(HOVERTIP.hide); HOVERTIP.hide = 0; return; }   // reading or selecting it
-  const a = t && t.closest("[data-tip]");
+  // any element with a tooltip: its title moves to data-tip, so the browser's own (vanishing) one never shows
+  const a = t && t.closest('[data-tip], [title]:not([title=""])');
+  if (a && a.hasAttribute("title")) {
+    if (a.title) a.dataset.tip = a.title;
+    a.removeAttribute("title");
+  }
   if (a && a.dataset.tip) {
     clearTimeout(HOVERTIP.hide); HOVERTIP.hide = 0;
     if (a !== HOVERTIP.anchor || HOVERTIP.el.hidden) showTip(a);
