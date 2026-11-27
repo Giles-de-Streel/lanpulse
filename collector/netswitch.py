@@ -626,14 +626,14 @@ class Kuma:
                          "WHERE x.monitor_id=m.id AND x.notification_id=n.id)")
 
     def status_page(self, title):
-        """Rebuild the volunteer status page with this network's name as its title. Commits first:
-        kuma-statuspage.sh writes to the same database."""
+        """Build (or rebuild) the status page the dashboard reads, with this network's name as its title.
+        A fresh install has none yet, so this creates it. Commits first: kuma-statuspage.sh writes to the
+        same database."""
         self.con.commit()
-        if self.q("SELECT count(*) FROM status_page WHERE slug='dashboard'")[0][0]:
-            rc, out = run([os.path.join(APP, "scripts", "kuma-statuspage.sh"), title], timeout=60,
-                          env={**os.environ, "NO_RESTART": "1", "APP": APP})
-            if rc != 0:
-                log(f"status page rebuild failed: {out.strip()[-200:]}")
+        rc, out = run([os.path.join(APP, "scripts", "kuma-statuspage.sh"), title], timeout=60,
+                      env={**os.environ, "NO_RESTART": "1", "APP": APP})
+        if rc != 0:
+            log(f"status page rebuild failed: {out.strip()[-200:]}")
 
 
 def starter_rows(cur):
@@ -941,11 +941,23 @@ def _ensure(verbose):
     return {"id": nid, **n}
 
 
+def kuma_has_page():
+    """Whether Kuma has the status page the dashboard reads (a new box doesn't until the first sync)."""
+    try:
+        con = sqlite3.connect(f"file:{KUMA_DB}?mode=ro", uri=True, timeout=10)
+        try:
+            return con.execute("SELECT count(*) FROM status_page WHERE slug='dashboard'").fetchone()[0] > 0
+        finally:
+            con.close()
+    except Exception:
+        return True          # can't tell (no database yet, or busy): don't force a sync on every run
+
+
 def sync_kuma(nets, base):
     """Run only the current network's devices in Uptime Kuma. Retried on later runs until it works
     (for example when the Kuma admin account hasn't been created yet on a new box)."""
     nid = nets["current"]
-    if nets.get("kuma_network") == nid and nets.get("box_monitors") == BOX_VERSION:
+    if nets.get("kuma_network") == nid and nets.get("box_monitors") == BOX_VERSION and kuma_has_page():
         return False
     prev = nets.get("kuma_network")
     n = nets["networks"][nid]
