@@ -841,6 +841,21 @@ function wireAlertsCard() {
   };
 }
 
+const REPO_URL = "https://github.com/Giles-de-Streel/lanpulse";
+
+// Open an outside page in its own smaller window (own title bar, can be moved, resized and closed),
+// so the dashboard stays put underneath. A normal tab on the wall screen has no Back button.
+// Returns false when the browser blocked the window; the link then opens the usual way.
+function openPopup(url, name) {
+  const w = Math.min(1100, screen.availWidth - 80), h = Math.min(800, screen.availHeight - 80);
+  const left = Math.round((screen.availWidth - w) / 2), top = Math.round((screen.availHeight - h) / 2);
+  const win = window.open(url, name, `popup,width=${w},height=${h},left=${left},top=${top}`);
+  if (!win) return false;
+  try { win.opener = null; } catch {}
+  win.focus();
+  return true;
+}
+
 function renderAdminPanel() {
   const p = $("#admin-panel");
   document.body.classList.add("admin-view");
@@ -872,6 +887,7 @@ function renderAdminPanel() {
           ${tool(3001, "Uptime Kuma", "Add or change monitored devices, alerts and notifications")}
           ${tool(20211, "NetAlertX", "Every device on the network, names, new-device alerts")}
           ${tool(8765, "Speedtest Tracker", "Internet speed history and test schedule")}
+          <a id="ap-repo" class="toolcard" href="${REPO_URL}" target="_blank" rel="noopener"><b>lanpulse on GitHub</b><span>Source code, setup guide and updates. Opens in a smaller window: close it to come back here.</span></a>
         </div>
       </div>
       <div class="admin-card"><h3>Phone alerts</h3><div id="ap-alerts">${alertsCard()}</div></div>
@@ -894,6 +910,7 @@ function renderAdminPanel() {
   setup.hidden = !BOX;
   wireAlertsCard();
   loadNetwork();
+  $("#ap-repo").onclick = (e) => { if (openPopup(REPO_URL, "lanpulse-repo")) e.preventDefault(); };
   $("#ap-signout").onclick = async () => {
     try { await api("api/logout", { method: "POST", body: "{}" }); } catch {}
     location.href = FROM_KIOSK ? "./?kiosk" : "./";
