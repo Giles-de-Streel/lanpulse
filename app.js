@@ -223,13 +223,21 @@ function render(snap) {
   // first scans after a boot or a move to another network: say so instead of "everything is working"
   const checking = snap.checking || [];
   const banner = $("#banner");
-  banner.className = "banner " + (bad ? "down" : checking.length ? "checking" : look || warn ? "pending" : "up");
-  $("#banner-title").textContent = bad
+  // out-of-date data must never look like "everything is working"
+  const genT = snap.generated ? new Date(snap.generated).getTime() : 0;
+  const old = !genT || Date.now() - genT > STALE_MS;
+  banner.className = "banner " + (old ? "pending" : bad ? "down" : checking.length ? "checking" : look || warn ? "pending" : "up");
+  $("#banner-title").textContent = old
+    ? (genT ? `Out of date: last update ${ago(snap.generated)}` : "No up-to-date information")
+    : bad
     ? `${bad} ${bad === 1 ? "thing needs" : "things need"} attention`
     : checking.length ? "Loading – checking the network…"
     : look ? `Working: ${look} ${look === 1 ? "thing" : "things"} to look at when convenient`
     : warn ? "Checking a few things…" : "Everything is working";
-  $("#banner-sub").innerHTML = checking.length && !bad
+  $("#banner-sub").innerHTML = old
+    ? `<div>The dashboard isn't getting fresh information, so what's shown below may be wrong.
+       If this lasts more than a few minutes, restart the monitoring box.</div>`
+    : checking.length && !bad
     ? esc(`Still running: ${checking.join(", ")}. Usually done within a few minutes of starting up.`)
     : esc(`${(sum.up || 0) + notes.length} of ${sum.total || 0} working` + (look && bad ? ` · ${look} to look at` : "")) +
     (notes.length ? ` · <a href="#tile-${esc(notes[0].id)}">${notes.length} ${notes.length === 1 ? "note" : "notes"} further down</a> <span class="help">(${esc(notes.map((n) => n.name).join(", "))})</span>` : "");
