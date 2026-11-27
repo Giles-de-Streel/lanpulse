@@ -24,6 +24,8 @@ Local-only is the default. Nothing leaves the box unless you turn on a publisher
 
 **Take it anywhere.** Plug the box into another network and it notices: it recognises each network by its router, points device discovery at it, and switches to that network's own device list, router login, baselines and history (a starter list the first time). Find it at `http://lanpulse.local:8080` whatever address it gets. See [docs/moving-networks.md](docs/moving-networks.md).
 
+**Runs in containers.** The box runs Uptime Kuma, NetAlertX, Speedtest Tracker, the collector and the Caddy web server as Docker containers. Each brings its own runtime (Node.js, PHP, Python), so the only thing the computer needs is Docker. The same setup works on Mint, Ubuntu, Fedora, openSUSE and Arch, and every image is pinned to an exact version in [`box/docker-compose.yml`](box/docker-compose.yml), so every box runs identical software. Each app keeps its data in its own folder under `/opt/monitor`, which is what the backups copy. The parts that need the network hardware or the operating system run directly on the host: Wi-Fi scans, the DHCP listener, moving between networks, and the scheduled checks.
+
 **Network health, not just device pings.** The box also checks for rogue DHCP servers, double NAT, ports opened to the internet by UPnP, packet loss, DNS, public IP changes, the Wi-Fi airspace and new devices, with no router password needed. Optional router adapters (ASUS/AiMesh, OpenWrt, UniFi) add wired / 2.4 / 5 / 6 GHz, access point and backhaul details. See [docs/network-checks.md](docs/network-checks.md).
 
 ## Quick start (on the box)
@@ -117,4 +119,17 @@ See [docs/architecture.md](docs/architecture.md). Issues and pull requests are w
 
 ## License
 
-MIT. The bundled tools keep their own licenses.
+lanpulse is MIT licensed (see [LICENSE](LICENSE)).
+
+lanpulse doesn't include or redistribute any of the software below. `setup.sh` installs Docker from your distro's packages and downloads each image from its own publisher. Each keeps its own license:
+
+| Component | What it does here | License |
+|---|---|---|
+| [Docker Engine](https://github.com/moby/moby), CLI and Compose | runs the containers | Apache 2.0 |
+| [Uptime Kuma](https://github.com/louislam/uptime-kuma) | device and service checks, history | MIT |
+| [NetAlertX](https://github.com/jokob-sk/NetAlertX) | finds every device on the network | GPL-3.0 |
+| [Speedtest Tracker](https://github.com/alexjustesen/speedtest-tracker) ([linuxserver.io image](https://github.com/linuxserver/docker-speedtest-tracker)) | internet speed tests | MIT (image packaging GPL-3.0) |
+| [Caddy](https://github.com/caddyserver/caddy) | serves the dashboard | Apache 2.0 |
+| [Python](https://www.python.org/) (collector) | builds the snapshot | PSF License |
+
+Running these unmodified places no obligations on lanpulse or on you. The GPL terms would only matter if you changed NetAlertX itself and distributed your changed version. lanpulse only uses the free, open-source Docker Engine on Linux, not Docker Desktop, which has its own paid-subscription terms for larger businesses.
