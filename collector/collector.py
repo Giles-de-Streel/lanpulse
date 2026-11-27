@@ -879,7 +879,7 @@ def apply_names(snap):
         for d in (snap["extras"].get(key) or []):
             n = names.get((d.get("mac") or "").upper())
             if n:
-                d["name"] = n
+                d["name"], d["named"] = n, True          # confirmed: a person gave this name
 
 
 def attach_links(snap):

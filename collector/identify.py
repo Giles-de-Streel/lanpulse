@@ -349,9 +349,8 @@ def identify(devs, state):
             k = match_hint(HOST_HINTS, rn)
             twin = next((o for o in online if o is not d and rn.lower() in
                          ((o.get("name") or "").lower(), (rnames.get(o["mac"].lower()) or "").lower())), None)
-            if twin:                            # e.g. two "Tesla_Model_3": the car, and something that borrowed its name
-                clues.append(f"{twin['ip']} uses the same name")
-                cands.append((3.3, f"{k} accessory or second connection" if k else f'second device named "{rn}"'))
+            if twin:                            # two devices with one name (a copied or joke name): don't guess from it
+                clues.append(f"{twin['ip']} uses the same name, so the name says little about what this is")
             else:
                 cands.append((3.2, k) if k else (9, f'device the router calls "{rn}"'))
         if u:

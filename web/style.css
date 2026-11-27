@@ -419,6 +419,8 @@ body.kiosk .theme-switch { font-size: .75rem; opacity: .85; }
 .ubar i { display: block; height: 100%; background: var(--maint); }
 .utext { font-variant-numeric: tabular-nums; }
 .guess { font-style: italic; }
+.reported { opacity: .85; }
+.name-key { margin-top: -.3rem; }
 #box-ips { margin: .15rem 0 0; color: var(--muted); font-size: .85rem; }
 #box-ips b { color: var(--text); font-weight: 600; }
 .sd-sort { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin: 0 0 .45rem; font-size: .8rem; color: var(--muted); }

@@ -391,13 +391,19 @@ function usageHtml(u, top) {
 
 // Unnamed devices: the box's best guess (identify.py) in italics; the full MAC is on the row's
 // second line so alike devices can be told apart. Hover shows the clues.
-const clueText = (d) => [d.vendor, d.mac, ...(d.clues || [])].filter(Boolean).join("\n");
+const clueText = (d) => [d.name && !d.named && d.hint ? `probably ${d.hint}` : "", d.vendor, d.mac, ...(d.clues || [])].filter(Boolean).join("\n");
 // rename (on the box, not the wall screen): signed-in administrators; others are asked to sign in first
 const canRename = () => !!SESSION && !KIOSK;
 const renameBtn = (d) => (canRename() && d.mac
   ? ` <button type="button" class="rn-btn" data-rename="${esc(d.mac.toUpperCase())}" title="Rename this device" aria-label="Rename">✎</button>` : "");
+// Three kinds of label, kept visibly apart:
+//   Name you gave it (✎)   plain: confirmed by a person
+//   “name it reports”       in quotes: what the device or router calls it, not checked (could be a joke)
+//   Probably …              italics: the box's guess from the clues
+const REPORTED_TIP = "The name this device (or the router) reports. Not confirmed: rename it to confirm what it is.";
 function devLabel(d) {
-  if (d.name) return esc(d.name);
+  if (d.name && d.named) return esc(d.name);
+  if (d.name) return `<span class="reported" title="${REPORTED_TIP}">“${esc(d.name)}”</span>`;
   if (d.hint) return `<span class="guess">Probably ${esc(d.hint)}</span>`;
   return esc(d.vendor && d.vendor !== "Private" ? d.vendor : "Unknown device");
 }
@@ -1332,7 +1338,7 @@ function mergedDevices(x) {
     const d = out.get(k) || byIp || {};
     if (byIp && !out.get(k)) out.delete((byIp.mac || byIp.ip || "").toUpperCase());
     out.set((d.mac || k).toUpperCase(), { ...d, mac: d.mac || c.mac, ip: d.ip || c.ip, name: [d.name, c.name].find((n) => n && n !== (d.vendor || c.vendor)) || null,
-      online: d.online ?? c.online, link: c.link, usage: c.usage || d.usage, hint: d.hint, clues: d.clues });
+      named: !!(d.named || c.named), online: d.online ?? c.online, link: c.link, usage: c.usage || d.usage, hint: d.hint, clues: d.clues });
   }
   return [...out.values()];
 }
@@ -1511,6 +1517,7 @@ function viewDevices(x) {
   $("#v-summary").innerHTML = `<p class="help">${all.filter((d) => d.online).length} online now, ${all.length} seen in total.
     ${x.clients ? "Connection details come from the router." : "Connect your router (admin view) to see wired / 2.4 / 5 GHz and signal for each device."}
     ${canRename() ? "Click ✎ to rename a device." : "Names and makers come from the device finder (NetAlertX); rename devices there."}</p>
+    <p class="help name-key">Plain names are ones you gave · <span class="reported">“quoted”</span> names are what the device or router reports (not confirmed) · <span class="guess">Probably …</span> is the box's guess</p>
     ${canRename() ? finderPanel(all) : ""}`;
   // fits the page width: guess and maker under the name, MAC under the IP, first/last seen together
   const withUse = rows.some((d) => d.usage), top = maxUsage(rows);

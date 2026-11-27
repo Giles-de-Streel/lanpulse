@@ -137,6 +137,8 @@ for n, (name, typ, band, node, rssi, rate) in enumerate(client_specs, start=20):
     link = {"type": typ, "band": band, "node": node, "rssi": rssi, "rate_mbps": rate} if typ == "wifi" else \
            {"type": "wired", "node": node, "rate_mbps": rate}
     c = {"mac": mac(100 + n), "ip": ip, "name": name, "online": True, "link": link}
+    if " " in name or ":" in name:              # typed by a person ("Office PC"); hostnames like "Galaxy-Tab" stay unconfirmed
+        c["named"] = True
     if name in DEMO_USE:                        # live traffic, as a UniFi controller reports it (bits/s)
         d, u = DEMO_USE[name]
         c["usage"] = {"down_bps": round(d * 1e6), "up_bps": round(u * 1e6), "rate_bps": round((d + u) * 1e6),
@@ -209,10 +211,13 @@ for k in range(42):
 devices = []
 for c in clients:
     devices.append({"mac": c["mac"], "name": c["name"], "ip": c["ip"], "vendor": None, "first_seen": ago(hours=5) if c["name"] == "Galaxy-Tab" else ago(days=40),
-                    "last_seen": ago(minutes=1), "online": True, "new": c["name"] == "Galaxy-Tab", "random_mac": c["name"].startswith("Phone"), "ssid": None})
+                    "last_seen": ago(minutes=1), "online": True, "new": c["name"] == "Galaxy-Tab", "random_mac": c["name"].startswith("Phone"), "ssid": None,
+                    **({"named": True} if c.get("named") else {}),
+                    **({"hint": "Samsung Galaxy tablet", "clues": ['calls itself "Galaxy-Tab" when it joins', 'DHCP vendor tag "android-dhcp-14"']}
+                       if c["name"] == "Galaxy-Tab" else {})})
 devices.append({"mac": "02:11:22:33:44:55", "name": None, "ip": "192.168.1.88", "vendor": None, "first_seen": ago(hours=3),
                 "last_seen": ago(minutes=2), "online": True, "new": True, "random_mac": True, "ssid": None})
-devices.append({"mac": mac(999), "name": "Old laptop", "ip": "192.168.1.99", "vendor": None, "first_seen": ago(days=90),
+devices.append({"mac": mac(999), "name": "Old laptop", "named": True, "ip": "192.168.1.99", "vendor": None, "first_seen": ago(days=90),
                 "last_seen": ago(days=6), "online": False, "new": False, "random_mac": False, "ssid": None})
 
 extras = {
