@@ -279,6 +279,7 @@ function render(snap) {
   const core = (snap.groups || []).find((g) => CORE_GROUPS.includes(g.name) && g.items.length <= 4);
   const coreIds = new Set(core ? core.items.map((i) => i.id) : []);
   renderBannerNet(core);
+  flagged.sort((a, b) => (a.status === "down" ? 0 : 1) - (b.status === "down" ? 0 : 1));   // down first, then things to look at
   list.innerHTML = flagged.slice(0, 8).map((i) =>
     `<li class="${i.status}"><a href="${coreIds.has(i.id) ? "#banner" : `#tile-${esc(i.id)}`}"><b>${esc(i.name)}</b></a>${i.note || i.message ? `: ${esc(i.note || i.message)}` : ` (${esc(i.group)})`} <button type="button" class="ghost small more-btn" data-item="${esc(i.id)}">Details…</button>${i.hint ? `<br><span class="hint">${esc(i.hint)}</span>` : ""}</li>`).join("");
   list.hidden = !flagged.length;

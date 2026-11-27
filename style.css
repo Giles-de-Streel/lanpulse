@@ -128,6 +128,8 @@ button:disabled { opacity: .6; cursor: wait; }
 /* banner: name each problem */
 #banner-list { margin: .5rem 0 0; padding-left: 1.1rem; }
 #banner-list li { margin: .25rem 0; }
+/* in a red banner, things that only need a look sit in their own beige box, so red means "down" only */
+.banner.down #banner-list li.warn { list-style: none; margin: .35rem 0 .35rem -1.1rem; padding: .35rem .7rem; border-radius: 8px; background: var(--pending-bg); border-left: 4px solid var(--pending); }
 #banner-list a { color: inherit; }
 #banner-list .hint, .tile .hint { color: var(--muted); font-size: .85rem; }
 .tile .hint { margin-top: .3rem; line-height: 1.35; }
