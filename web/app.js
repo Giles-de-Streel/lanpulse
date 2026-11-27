@@ -1489,6 +1489,12 @@ document.addEventListener("click", (e) => {
   } else openRename(mac);
 }, true);
 
+// how the box identified it, shown under the name (the maker is already on the line above)
+function devClues(d) {
+  const c = (d.clues || []).filter((t) => !/^network chip made by /.test(t));
+  return c.length ? `<div class="dt-clues">${c.map(esc).join(" · ")}</div>` : "";
+}
+
 function viewDevices(x) {
   const all = mergedDevices(x);
   const weakAt = -70;
@@ -1518,7 +1524,7 @@ function viewDevices(x) {
       <td><span class="sdot ${d.online ? "up" : ""}" title="${d.online ? "online" : "offline"}"></span></td>
       <td class="dt-name" data-tip="${esc(clueText(d))}">${devLabel(d)}${renameBtn(d)} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}
         <div class="dt-sub">${[d.name && d.hint ? `<i>looks like ${esc(d.hint)}</i>` : "", esc(d.vendor || ""),
-          d.random_mac ? `<span title="Phones and laptops often use a changing private address">private MAC</span>` : ""].filter(Boolean).join(" · ")}</div></td>
+          d.random_mac ? `<span title="Phones and laptops often use a changing private address">private MAC</span>` : ""].filter(Boolean).join(" · ")}</div>${devClues(d)}</td>
       <td class="dt-addr">${esc(d.ip || "")}<div class="dt-sub mono">${esc((d.mac || "").toUpperCase())}</div></td>
       <td class="dt-wrap">${conn(d)}</td>
       <td>${d.link?.rssi != null ? `<span class="${d.link.rssi < weakAt ? "weak" : ""}">${Math.round(d.link.rssi)} dBm</span>` : ""}</td>
