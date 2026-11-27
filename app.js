@@ -353,7 +353,7 @@ function render(snap) {
   const rest = failed.filter((s) => !s.setup);
   $("#warning").hidden = !(stale || failed.length);
   if (stale) $("#warning").textContent = "This information is out of date. The monitoring box may be off or disconnected.";
-  else if (setup) $("#warning").innerHTML = `<b>One step left:</b> open <a href="http://${esc(location.hostname)}:3001/" target="_blank" rel="noopener">Uptime Kuma</a>
+  else if (setup) $("#warning").innerHTML = `<b>One step left:</b> open <a href="http://${esc(location.hostname)}:3001/" target="_blank" rel="noopener" data-popup>Uptime Kuma</a>
     and create its admin account. The device and service checks appear here by themselves within a few minutes.` +
     (rest.length ? ` Also couldn't read: ${esc(rest.map((f) => f.name).join(", "))}.` : "");
   else $("#warning").textContent = failed.length ? `Some data couldn't be read: ${failed.map((f) => f.name).join(", ")}` : "";
@@ -927,7 +927,7 @@ function renderAdminPanel() {
           ${tool(3001, "Uptime Kuma", "Add or change monitored devices, alerts and notifications")}
           ${tool(20211, "NetAlertX", "Every device on the network, names, new-device alerts")}
           ${tool(8765, "Speedtest Tracker", "Internet speed history and test schedule")}
-          <a id="ap-repo" class="toolcard" href="${REPO_URL}" target="_blank" rel="noopener"><b>lanpulse on GitHub</b><span>Source code, setup guide and updates. Opens in a smaller window: close it to come back here.</span></a>
+          <a id="ap-repo" class="toolcard" href="${REPO_URL}" target="_blank" rel="noopener" data-popup="lanpulse-repo"><b>lanpulse on GitHub</b><span>Source code, setup guide and updates. Opens in a smaller window: close it to come back here.</span></a>
         </div>
       </div>
       <div class="admin-card"><h3>Phone alerts</h3><div id="ap-alerts">${alertsCard()}</div></div>
@@ -950,7 +950,7 @@ function renderAdminPanel() {
   setup.hidden = !BOX;
   wireAlertsCard();
   loadNetwork();
-  $("#ap-repo").onclick = (e) => { if (openPopup(REPO_URL, "lanpulse-repo")) e.preventDefault(); };
+
   $("#ap-signout").onclick = async () => {
     try { await api("api/logout", { method: "POST", body: "{}" }); } catch {}
     location.href = FROM_KIOSK ? "./?kiosk" : "./";
@@ -1774,3 +1774,9 @@ document.addEventListener("pointermove", (e) => {
 }, { passive: true });
 // scrolling the device list moves the rows away from the pop-up
 document.addEventListener("scroll", () => { if (HOVERTIP.el) { HOVERTIP.el.hidden = true; HOVERTIP.anchor = null; } }, { passive: true, capture: true });
+
+// Links marked data-popup open in a smaller window of their own (the wall screen has no Back button)
+document.addEventListener("click", (e) => {
+  const a = e.target instanceof Element && e.target.closest("a[data-popup]");
+  if (a && openPopup(a.href, a.dataset.popup || "lanpulse-popup")) e.preventDefault();
+});
