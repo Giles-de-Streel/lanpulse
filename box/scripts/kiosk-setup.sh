@@ -75,7 +75,7 @@ EOF
 esac
 
 echo "== packages"
-pkg_install optional unclutter || true
+pkg_install optional unclutter xdotool || true
 command -v unclutter >/dev/null || echo "   (unclutter not available, cursor stays visible)"
 if ! command -v firefox >/dev/null && ! command -v chromium >/dev/null && ! command -v chromium-browser >/dev/null \
    && ! command -v google-chrome >/dev/null; then
@@ -114,7 +114,21 @@ CHROME=\$(command -v chromium || command -v chromium-browser || command -v googl
 while true; do
   if command -v firefox >/dev/null; then
     rm -f "\$PROFILE/lock" "\$PROFILE/.parentlock"
-    firefox --no-remote --profile "\$PROFILE" --kiosk "\$URL"
+    if [ -z "\${WAYLAND_DISPLAY:-}" ] && command -v xdotool >/dev/null && [ "\${KIOSK_MODE:-fullscreen}" = fullscreen ]; then
+      # full screen (like F11) rather than --kiosk: --kiosk forces every window full screen, so a page the
+      # dashboard opens in a pop-up (Uptime Kuma, GitHub) would cover the screen with no way to close it.
+      # Full screen keeps pop-ups as normal, smaller windows with their own close button.
+      firefox --no-remote --profile "\$PROFILE" "\$URL" &
+      FPID=\$!
+      for i in \$(seq 1 60); do
+        W=\$(xdotool search --onlyvisible --pid "\$FPID" 2>/dev/null | head -1)
+        [ -n "\$W" ] && break; sleep 1
+      done
+      [ -n "\${W:-}" ] && { sleep 2; xdotool windowactivate --sync "\$W" key F11; }
+      wait "\$FPID"
+    else
+      firefox --no-remote --profile "\$PROFILE" --kiosk "\$URL"
+    fi
   elif [ -n "\$CHROME" ]; then
     "\$CHROME" --kiosk --no-first-run --noerrdialogs --disable-session-crashed-bubble --disable-infobars \
       --password-store=basic --user-data-dir="\$HOME/.kiosk-chromium" "\$URL"
