@@ -256,6 +256,10 @@ def identify(devs, state):
                               not (host and match_hint(HOST_HINTS, host)) else 1, lab))
             elif host:
                 cands.append((9, f'device calling itself "{host}"'))
+        # the name the network already knows it by (router / device finder), e.g. "echoshow-…", "moto-g-2025"
+        known = match_hint(HOST_HINTS, d.get("name")) if d.get("name") else None
+        if known:
+            cands.append((1.5, known))
         if u:
             what = " ".join(x for x in (u.get("maker"), u.get("model")) if x)
             clues.append(f"describes itself as {u.get('name') or what}" + (f" ({what})" if u.get("name") and what else ""))
@@ -304,7 +308,7 @@ def identify(devs, state):
             if os_words:
                 cands.append((10 if os_words != "Linux-based device" else 12, os_words))
             elif not re.match(r"(linux|microsoft|windows|apple|mac os|freebsd|openbsd|netbsd|android|vxworks|embedded)", fp, re.I):
-                cands.append((10.5, fp))         # a named product, e.g. "OSRAM Lightify ZigBee gateway"
+                cands.append((11.5, fp))         # a named product, e.g. "OSRAM Lightify ZigBee gateway" (after the maker)
         vendor_words = plain(VENDOR_HINTS, d.get("vendor"))
         if d.get("vendor") and d["vendor"] not in ("Private",) and not d["vendor"].startswith("("):
             clues.append(f"network chip made by {d['vendor']}")
@@ -337,7 +341,8 @@ HOST_HINTS = [   # its own hostname (regex, case-insensitive) -> plain words; {0
     (r"^iphone", "iPhone"), (r"^ipad", "iPad"), (r"macbook-?air", "MacBook Air"), (r"macbook-?pro", "MacBook Pro"),
     (r"macbook", "MacBook"), (r"^imac", "iMac"), (r"mac-?mini", "Mac mini"), (r"apple-?tv", "Apple TV"), (r"homepod", "HomePod"),
     (r"^galaxy-?(\w[\w-]*)", "Samsung Galaxy {0}"), (r"^(sm-[a-z]\d+\w*)", "Samsung phone or tablet ({0})"),
-    (r"^pixel-?(\w+)", "Google Pixel {0}"), (r"^oneplus", "OnePlus phone"), (r"^moto", "Motorola phone"),
+    (r"^pixel-?(\w+)", "Google Pixel {0}"), (r"^oneplus", "OnePlus phone"),
+    (r"^moto-?(g|e|edge|razr|one|x|z)(?:-|_)?([\w-]*)", "Motorola moto {0} {1}"), (r"^moto", "Motorola phone"),
     (r"^android-", "Android phone or tablet"), (r"lgwebostv", "LG webOS TV"), (r"^samsung", "Samsung TV or appliance"),
     (r"^roku", "Roku"), (r"^chromecast", "Chromecast"), (r"^google-?home", "Google Home / Nest speaker"),
     (r"^nest", "Nest device"), (r"^echo-?show|^echoshow", "Amazon Echo Show"), (r"^echo", "Amazon Echo"),
