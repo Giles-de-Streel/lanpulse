@@ -201,13 +201,18 @@ function renderBannerNet(core) {
     el.className = "bnet";
     el.setAttribute("aria-label", "Connection checks");
   }
-  // one row under the status text ("20 of 20 working"), above any listed problems
-  const sub = $("#banner-sub");
-  if (sub.nextElementSibling !== el) sub.after(el);
+  // centred in the banner: between the status text and the clock
+  const banner = $("#banner"), clock = $("#clock");
+  const before = clock && clock.parentElement === banner ? clock : null;
+  if (el.parentElement !== banner || el.nextElementSibling !== before) banner.insertBefore(el, before);
   el.innerHTML = core.items.map((i) => {
-    const what = i.status === "up" ? (i.latency_ms != null ? `${Math.round(i.latency_ms)} ms` : "Working") : (LABEL[i.status] || i.status);
-    return `<button type="button" class="bnet-item ${esc(i.status)}" data-item="${esc(i.id)}" title="${esc(i.message || i.note || "")}">
-      <i aria-hidden="true"></i><b>${esc(i.name)}</b><span>${esc(what)}</span></button>`;
+    // the pie fills by the share of the last 24 h it was working; the gap is the time it wasn't
+    const up = i.uptime_24h != null ? Math.max(0, Math.min(1, i.uptime_24h)) : i.status === "up" ? 1 : 0;
+    const mid = i.status === "up" ? (i.latency_ms != null ? `${Math.round(i.latency_ms)}<small>ms</small>` : "✓")
+      : i.status === "down" ? "✕" : "…";
+    const tip = `${i.name}: ${LABEL[i.status] || i.status}${i.uptime_24h != null ? ` · ${pct(i.uptime_24h)} of the last 24 h` : ""}${i.message ? ` · ${i.message}` : ""}`;
+    return `<button type="button" class="bnet-item ${esc(i.status)}" data-item="${esc(i.id)}" title="${esc(tip)}" style="--share:${up.toFixed(4)}">
+      <span class="pie" aria-hidden="true"><span>${mid}</span></span><b>${esc(i.name)}</b></button>`;
   }).join("");
 }
 
