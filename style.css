@@ -462,3 +462,9 @@ html.kiosk .sd-list { scrollbar-width: auto; }
 body.k-mini .bnet-item .pie { width: 48px; height: 48px; }
 body.k-mini .bnet-item .pie > span { width: 36px; height: 36px; font-size: .8rem; }
 @media (max-width: 900px) { .banner .bnet { flex-basis: 100%; justify-content: flex-start; } }
+/* with the pies: three columns (text | pies | clock) so the pies sit in the true middle of the banner */
+@media (min-width: 901px) {
+  .banner:has(.bnet) { display: grid; grid-template-columns: auto 1fr auto 1fr; }
+  .banner:has(.bnet) .bnet { flex: none; }
+  .banner:has(.bnet) .clock { justify-self: end; margin-left: 0; }
+}
