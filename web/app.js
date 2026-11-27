@@ -150,9 +150,10 @@ function renderClock(x) {
     const ntp = $("#c-ntp");
     if (!t?.servers?.length) { ntp.innerHTML = ""; return; }
     const okN = t.servers.filter((s) => s.ok).length;
-    ntp.innerHTML = `Internet time (NTP): ` + t.servers.map((s) =>
-      `<span class="${s.ok ? "ok" : "bad"}" title="${esc(s.ok ? `answered in ${Math.round(s.rtt_ms)} ms; box clock ${s.offset_ms >= 0 ? "behind" : "ahead"} by ${Math.abs(s.offset_ms)} ms; stratum ${s.stratum}` : `no answer: ${s.error || ""}`)}">${esc(s.host)} ${s.ok ? "✓" : "✗"}</span>`).join(" · ") +
-      (box != null ? ` <span class="help" title="checked ${esc(ago(t.at))}">· box clock ${Math.abs(box) < 500 ? "in sync" : `off by ${(Math.abs(box) / 1000).toFixed(1)} s`}${okN < t.servers.length ? ` · ${t.servers.length - okN} not answering` : ""}</span>` : "");
+    // just the server names; one that didn't answer is red with ✗, and the box clock is only mentioned when it's off
+    ntp.innerHTML = `<span title="Internet time servers the box checks its clock against (checked ${esc(ago(t.at))}${okN < t.servers.length ? `; ${t.servers.length - okN} not answering` : ""})">NTP:</span> ` + t.servers.map((s) =>
+      `<span class="${s.ok ? "ok" : "bad"}" title="${esc(s.ok ? `answered in ${Math.round(s.rtt_ms)} ms; box clock ${s.offset_ms >= 0 ? "behind" : "ahead"} by ${Math.abs(s.offset_ms)} ms; stratum ${s.stratum}` : `no answer: ${s.error || ""}`)}">${esc(s.host)}${s.ok ? "" : " ✗"}</span>`).join(" · ") +
+      (box != null && Math.abs(box) >= 500 ? ` <span class="bad">· box clock off by ${(Math.abs(box) / 1000).toFixed(1)} s</span>` : "");
   });
 }
 
