@@ -441,7 +441,7 @@ function renderSide(x) {
   const nw = live.filter((d) => d.new).length;
   const href = viewHref("devices"), tgt = KIOSK ? "" : ` target="_blank" rel="noopener"`;
   side.innerHTML = `<h2><a href="${href}"${tgt}>Devices</a><span class="help">${live.length} online now${nw ? ` · ${nw} new` : ""}${byUsage && mode === "auto" ? " · busiest first" : ""}</span></h2>${sortBar}
-    <ul class="sd-list">${live.length ? "" : `<li class="help">No devices online right now</li>`}${live.map((d) => `<li class="sd-row${d.online ? "" : " off"}" title="${esc(clueText(d))}">
+    <ul class="sd-list">${live.length ? "" : `<li class="help">No devices online right now</li>`}${live.map((d) => `<li class="sd-row${d.online ? "" : " off"}" data-tip="${esc(clueText(d))}">
       <span class="sdot ${d.online ? "up" : ""}"></span>
       <span class="sd-name">${devLabel(d)}${renameBtn(d)}${d.new ? ` <span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}</span>
       <span class="sd-ip">${esc(d.ip || "")}</span>${d.link || d.mac ? `<span class="sd-link"><span>${d.link ? linkText(d.link) : ""}</span><span class="sd-mac mono">${esc((d.mac || "").toUpperCase())}</span></span>` : ""}${byUsage ? `<span class="sd-use">${usageHtml(d.usage, top)}</span>` : ""}</li>`).join("")}</ul>
@@ -1511,7 +1511,7 @@ function viewDevices(x) {
     ["last", "Seen", (d) => tsOf(d.last_seen)],
   ], rows, (d) => `<tr class="${d.online ? "" : "off"}">
       <td><span class="sdot ${d.online ? "up" : ""}" title="${d.online ? "online" : "offline"}"></span></td>
-      <td class="dt-name" title="${esc(clueText(d))}">${devLabel(d)}${renameBtn(d)} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}
+      <td class="dt-name" data-tip="${esc(clueText(d))}">${devLabel(d)}${renameBtn(d)} ${d.new ? `<span class="chip warn">new</span>` : ""}${d.this_box ? ` <span class="chip">this box</span>` : ""}
         <div class="dt-sub">${[d.name && d.hint ? `<i>looks like ${esc(d.hint)}</i>` : "", esc(d.vendor || ""),
           d.random_mac ? `<span title="Phones and laptops often use a changing private address">private MAC</span>` : ""].filter(Boolean).join(" · ")}</div></td>
       <td class="dt-addr">${esc(d.ip || "")}<div class="dt-sub mono">${esc((d.mac || "").toUpperCase())}</div></td>
@@ -1726,3 +1726,41 @@ if (KIOSK && !VIEW) {
   check();
   setInterval(check, 60_000);
 }
+
+// Hover details for devices (maker, MAC, how it was identified). The browser's own tooltips vanish
+// after a few seconds; this one stays while the pointer is on the row or on the pop-up itself.
+const HOVERTIP = { el: null, anchor: null, hide: 0 };
+function showTip(a) {
+  let el = HOVERTIP.el;
+  if (!el) {
+    el = HOVERTIP.el = document.createElement("div");
+    el.className = "hovertip";
+    el.setAttribute("role", "tooltip");
+    document.body.append(el);
+  }
+  HOVERTIP.anchor = a;
+  el.textContent = a.dataset.tip;
+  el.hidden = false;
+  const r = a.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  let x = Math.min(Math.max(8, r.left), innerWidth - w - 8);
+  let y = r.bottom + 4;
+  if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 4);   // no room below: show above
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+}
+document.addEventListener("pointermove", (e) => {
+  const t = e.target instanceof Element ? e.target : null;
+  if (t && HOVERTIP.el && HOVERTIP.el.contains(t)) { clearTimeout(HOVERTIP.hide); HOVERTIP.hide = 0; return; }   // reading or selecting it
+  const a = t && t.closest("[data-tip]");
+  if (a && a.dataset.tip) {
+    clearTimeout(HOVERTIP.hide); HOVERTIP.hide = 0;
+    if (a !== HOVERTIP.anchor || HOVERTIP.el.hidden) showTip(a);
+    return;
+  }
+  // moved away: a short grace period lets the pointer cross the gap onto the pop-up
+  if (HOVERTIP.el && !HOVERTIP.el.hidden && !HOVERTIP.hide) HOVERTIP.hide = setTimeout(() => {
+    HOVERTIP.el.hidden = true; HOVERTIP.anchor = null; HOVERTIP.hide = 0;
+  }, 250);
+}, { passive: true });
+// scrolling the device list moves the rows away from the pop-up
+document.addEventListener("scroll", () => { if (HOVERTIP.el) { HOVERTIP.el.hidden = true; HOVERTIP.anchor = null; } }, { passive: true, capture: true });
