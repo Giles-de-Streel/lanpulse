@@ -909,7 +909,7 @@ function renderAdminPanel() {
   }
   p.dataset.done = "1";
   const host = location.hostname;
-  const tool = (port, name, what) => `<a class="toolcard" href="http://${host}:${port}/" target="${FROM_KIOSK ? "_self" : "_blank"}" rel="noopener"><b>${name}</b><span>${what}</span></a>`;
+  const tool = (port, name, what) => `<a class="toolcard" href="http://${host}:${port}/" target="_blank" rel="noopener" data-popup="lp-${port}"><b>${name}</b><span>${what}</span></a>`;
   p.innerHTML = `
     <div class="admin-head">
       <h2>Administration</h2>
@@ -927,7 +927,7 @@ function renderAdminPanel() {
           ${tool(3001, "Uptime Kuma", "Add or change monitored devices, alerts and notifications")}
           ${tool(20211, "NetAlertX", "Every device on the network, names, new-device alerts")}
           ${tool(8765, "Speedtest Tracker", "Internet speed history and test schedule")}
-          <a id="ap-repo" class="toolcard" href="${REPO_URL}" target="_blank" rel="noopener" data-popup="lanpulse-repo"><b>lanpulse on GitHub</b><span>Source code, setup guide and updates. Opens in a smaller window: close it to come back here.</span></a>
+          <a id="ap-repo" class="toolcard" href="${REPO_URL}" target="_blank" rel="noopener" data-popup="lanpulse-repo"><b>lanpulse on GitHub</b><span>Source code, setup guide and updates. Opens in a smaller window.</span></a>
         </div>
       </div>
       <div class="admin-card"><h3>Phone alerts</h3><div id="ap-alerts">${alertsCard()}</div></div>
@@ -1775,8 +1775,27 @@ document.addEventListener("pointermove", (e) => {
 // scrolling the device list moves the rows away from the pop-up
 document.addEventListener("scroll", () => { if (HOVERTIP.el) { HOVERTIP.el.hidden = true; HOVERTIP.anchor = null; } }, { passive: true, capture: true });
 
-// Links marked data-popup open in a smaller window of their own (the wall screen has no Back button)
+// Links marked data-popup open in a smaller window of their own. On the wall screen (Firefox --kiosk),
+// every window is forced full screen with no way back, so it shows the address to open elsewhere instead.
 document.addEventListener("click", (e) => {
   const a = e.target instanceof Element && e.target.closest("a[data-popup]");
-  if (a && openPopup(a.href, a.dataset.popup || "lanpulse-popup")) e.preventDefault();
+  if (!a) return;
+  if (KIOSK || FROM_KIOSK || FROM_KIOSK_VIEW) { e.preventDefault(); showAddress(a.href, (a.querySelector("b") || a).textContent.trim()); return; }
+  if (openPopup(a.href, a.dataset.popup || "lanpulse-popup")) e.preventDefault();
 });
+function showAddress(href, what) {
+  const box = LAST_SNAP?.extras?.box || {};
+  const u = new URL(href);
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+  const swap = (host) => { const x = new URL(href); x.hostname = host; return x.href; };
+  const names = local
+    ? [box.hostname && swap(`${box.hostname}.local`), ...((box.ips || []).slice(0, 1).map((x) => swap(x.ip)))].filter(Boolean)
+    : [href];
+  $("#item-body").innerHTML = `<h2>${esc(what || "Open this page")} on another computer or phone</h2>
+    <p>The wall screen can't open other pages and come back to the dashboard. On a computer or phone on this network, go to:</p>
+    ${names.map((n, i) => `<p class="addr${i ? " alt" : ""}">${i ? "or " : ""}<b class="mono">${esc(n)}</b></p>`).join("")}`;
+  const d = $("#item-dialog");
+  if (!d.open) d.showModal();
+  clearTimeout(openItem.t);
+  openItem.t = setTimeout(() => d.open && d.close(), 120_000);   // don't stay open on the wall screen
+}
