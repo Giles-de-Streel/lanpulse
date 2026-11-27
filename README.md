@@ -69,8 +69,17 @@ Keep your site CSVs somewhere private (your own repo or the box). They describe 
 - opens the dashboard ports in ufw or firewalld, if either is running
 - adds a nightly data backup to `/opt/monitor/backups` (keeps 14)
 - installs OS updates nightly (kiosk setup) and reboots at 04:15 only when an update needs it
+- pins every container image to a tested version and caps container and system logs
+- runs a heartbeat every 5 minutes when `LANPULSE_HEARTBEAT_URL` is set (see below)
 
 It is safe to re-run, for example after a `git pull`.
+
+## Staying up, and recovering
+
+- **Power and disk:** on a laptop, the Monitoring box group shows a Power tile. Losing mains power means the site's power is out, and the battery keeps the box going. A Disk space tile sits next to it. Both send phone alerts. An alert that can't be sent during an outage is delivered once the internet is back. In the laptop's BIOS, turn on *wake/power on when AC is connected*, so the box starts again by itself after a long cut drains the battery.
+- **Box gone quiet:** make a free check at [healthchecks.io](https://healthchecks.io) with a 5 minute period and 10 minute grace, and connect it to the ntfy app or email. Put its ping URL in `LANPULSE_HEARTBEAT_URL` in `/opt/monitor/lanpulse.env`. The box pings it while its data is fresh, so a dead, frozen or offline box, or a stopped collector, gets reported from outside.
+- **Off-site backups:** run `sudo /opt/monitor/scripts/offsite-setup.sh git@github.com:you/lanpulse-backups.git` to set them up. Use a **private** repo, add the deploy key it prints with write access, and move the age private key it creates off the box. After that, each nightly backup is encrypted and the newest 7 are pushed.
+- **Restore on a new box:** clone the repo and run `sudo box/setup.sh`. Then run `sudo /opt/monitor/scripts/restore.sh monitor-data-....tgz.age key.txt`.
 
 | First visit | Default |
 |---|---|
