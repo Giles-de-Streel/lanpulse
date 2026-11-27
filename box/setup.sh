@@ -298,10 +298,12 @@ systemctl restart systemd-journald 2>/dev/null || true
 systemctl daemon-reload
 systemctl enable --now lanpulse-heartbeat.timer >/dev/null 2>&1
 
+echo "== Uptime Kuma first-run setup (database and admin account, so nobody has to open it)"
+APP=$APP "$APP/scripts/kuma-init.sh" || true
 echo "== done"
 docker ps --format '{{.Names}}  {{.Status}}'
 echo
-systemctl start lanpulse-network.service || true   # detect the current network now
+systemctl start lanpulse-network.service || true   # detect the current network now (adds the starter checks)
 # every address the box has (cable and Wi-Fi can both be connected); the main one (default route) first
 MAIN=$(ip -4 route show default 2>/dev/null | awk '{for(i=1;i<NF;i++) if($i=="src"){print $(i+1); exit}}')
 ADDRS=$(ip -4 -o addr show scope global 2>/dev/null | grep -v -E ' (docker|br-|veth)' \
@@ -311,15 +313,15 @@ KUMA_USERS=$(python3 -c "import sqlite3;print(sqlite3.connect('file:$APP/uptime-
 echo "Dashboard:  http://$(hostname).local:8080   (works on any network)"
 echo "$ADDRS" | while read -r k a i; do [ -n "$a" ] && echo "            http://$a:8080   $i${k:+, $k connection}"; done
 echo
-if [ "$KUMA_USERS" = "0" ]; then
+echo "Next:"
+[ "$KUMA_USERS" = "0" ] && echo "  - open http://$IP:3001 and create the Uptime Kuma admin account (the automatic setup didn't finish)"
 cat <<EOF
-Next:
-  1. open http://$IP:3001 and create the Uptime Kuma admin account
-  2. open the dashboard, sign in as administrator (you choose the password the first time) and use
-     "This network" > "Devices to watch" to add devices. (Or: sudo $APP/scripts/kuma-apply.sh <site>.csv)
-  optional wall screen: sudo $APP/scripts/kiosk-setup.sh
+  - open the dashboard, sign in as administrator (you choose the password the first time) and use
+    "This network" > "Devices to watch" to add devices. (Or: sudo $APP/scripts/kuma-apply.sh <site>.csv)
+  - optional wall screen: sudo $APP/scripts/kiosk-setup.sh
 EOF
-fi
+grep -q '^KUMA_ADMIN_PASSWORD=' "$APP/.env" 2>/dev/null && \
+  echo "  - Uptime Kuma itself (optional): http://$IP:3001, user admin, password: sudo grep KUMA_ADMIN_PASSWORD $APP/.env"
 cat <<EOF
 Moving the box to another network: just plug it in (or join Wi-Fi from the admin view). It notices,
 switches to that network's device list (a starter list the first time) and keeps each network's
