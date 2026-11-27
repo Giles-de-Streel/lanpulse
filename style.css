@@ -473,3 +473,7 @@ body.k-mini .bnet-item .pie > span { width: 36px; height: 36px; font-size: .8rem
             background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
             box-shadow: 0 6px 20px #0003; font-size: .85rem; line-height: 1.4; user-select: text; }
 .sd-row[data-tip], .dt-name[data-tip] { cursor: help; }
+@media (min-width: 901px) {
+  /* problems listed in the banner: give the text the room, pies move next to the clock */
+  .banner:has(.bnet):has(#banner-list:not([hidden])) { grid-template-columns: auto 1fr auto auto; }
+}
