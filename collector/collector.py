@@ -809,6 +809,10 @@ def build_snapshot():
     if net:
         snap["extras"]["network"] = {k: net.get(k) for k in
                                      ("id", "name", "subnet", "gateway", "interface", "kind", "ssid", "since", "setup", "visits")}
+        # the header shows the network's own name: a rename in the admin view lands here at once, while
+        # the Kuma status page title (the source's site name) catches up later
+        if net.get("name"):
+            snap["site"]["name"] = net["name"]
     if SITE_NAME:
         snap["site"]["name"] = SITE_NAME
     if SITE_DESC:

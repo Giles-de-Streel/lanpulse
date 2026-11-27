@@ -1162,7 +1162,12 @@ function renderNetwork() {
     e.preventDefault();
     const out = $("#ap-net-result");
     const j = await netRequest({ type: "rename", network: n.id, name: $("#ap-net-n").value }, out);
-    if (j) { out.hidden = false; out.className = "result good"; out.textContent = `Renamed to ${j.name}.`; setTimeout(refresh, 3000); }
+    if (j) {
+      out.hidden = false; out.className = "result good"; out.textContent = `Renamed to ${j.name}.`;
+      $("#site-name").textContent = j.name;            // header now; the next refresh brings the rest
+      document.title = j.name;
+      setTimeout(refresh, 1500);
+    }
   };
   const out = $("#ap-net-result");
   const busy = (b, text) => { out.hidden = false; out.className = "result"; out.textContent = text; b.disabled = true; };
