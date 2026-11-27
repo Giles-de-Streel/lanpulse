@@ -259,7 +259,7 @@ def identify(devs, state):
         # the name the network already knows it by (router / device finder), e.g. "echoshow-…", "moto-g-2025"
         known = match_hint(HOST_HINTS, d.get("name")) if d.get("name") else None
         if known:
-            cands.append((1.5, known))
+            cands.append((3.2, known))          # below its own announcements, which can add a room name
         if u:
             what = " ".join(x for x in (u.get("maker"), u.get("model")) if x)
             clues.append(f"describes itself as {u.get('name') or what}" + (f" ({what})" if u.get("name") and what else ""))
@@ -342,7 +342,7 @@ HOST_HINTS = [   # its own hostname (regex, case-insensitive) -> plain words; {0
     (r"macbook", "MacBook"), (r"^imac", "iMac"), (r"mac-?mini", "Mac mini"), (r"apple-?tv", "Apple TV"), (r"homepod", "HomePod"),
     (r"^galaxy-?(\w[\w-]*)", "Samsung Galaxy {0}"), (r"^(sm-[a-z]\d+\w*)", "Samsung phone or tablet ({0})"),
     (r"^pixel-?(\w+)", "Google Pixel {0}"), (r"^oneplus", "OnePlus phone"),
-    (r"^moto-?(g|e|edge|razr|one|x|z)(?:-|_)?([\w-]*)", "Motorola moto {0} {1}"), (r"^moto", "Motorola phone"),
+    (r"^moto-?(edge|razr|one|g|e|x|z)(?:-|_)?([\w-]*)", "Motorola moto {0} {1}"), (r"^moto", "Motorola phone"),
     (r"^android-", "Android phone or tablet"), (r"lgwebostv", "LG webOS TV"), (r"^samsung", "Samsung TV or appliance"),
     (r"^roku", "Roku"), (r"^chromecast", "Chromecast"), (r"^google-?home", "Google Home / Nest speaker"),
     (r"^nest", "Nest device"), (r"^echo-?show|^echoshow", "Amazon Echo Show"), (r"^echo", "Amazon Echo"),
