@@ -443,8 +443,7 @@ html.kiosk::-webkit-scrollbar { display: none; }
 html.kiosk .sd-list { scrollbar-width: auto; }
 
 /* connection checks (Router, Internet, Name lookups) as chips inside the status banner */
-.banner .bnet { margin-left: auto; display: flex; flex-wrap: wrap; gap: .5rem; align-self: center; justify-content: flex-end; }
-.banner .bnet + .clock { margin-left: 0; }
+.banner .bnet { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .55rem; }
 .bnet-item { display: grid; grid-template-columns: auto auto; column-gap: .45rem; align-items: center; text-align: left;
              padding: .45rem .75rem; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
 .bnet-item i { grid-row: span 2; width: 12px; height: 12px; border-radius: 50%; background: var(--unknown); }
@@ -458,4 +457,3 @@ html.kiosk .sd-list { scrollbar-width: auto; }
 .bnet-item:hover { border-color: #0f766e; }
 body.k-mini .bnet-item { padding: .3rem .55rem; }
 body.k-mini .bnet-item span { display: none; }
-@media (max-width: 900px) { .banner .bnet { margin-left: 0; flex-basis: 100%; justify-content: flex-start; } }
