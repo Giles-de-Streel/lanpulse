@@ -477,3 +477,6 @@ body.k-mini .bnet-item .pie > span { width: 36px; height: 36px; font-size: .8rem
   /* problems listed in the banner: give the text the room, pies move next to the clock */
   .banner:has(.bnet):has(#banner-list:not([hidden])) { grid-template-columns: auto 1fr auto auto; }
 }
+/* wall screen: address to open a page elsewhere */
+#item-body .addr { font-size: 1.35rem; margin: .4rem 0; }
+#item-body .addr.alt { font-size: 1rem; color: var(--muted); }

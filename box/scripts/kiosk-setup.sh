@@ -114,10 +114,10 @@ CHROME=\$(command -v chromium || command -v chromium-browser || command -v googl
 while true; do
   if command -v firefox >/dev/null; then
     rm -f "\$PROFILE/lock" "\$PROFILE/.parentlock"
-    if [ -z "\${WAYLAND_DISPLAY:-}" ] && command -v xdotool >/dev/null && [ "\${KIOSK_MODE:-fullscreen}" = fullscreen ]; then
-      # full screen (like F11) rather than --kiosk: --kiosk forces every window full screen, so a page the
-      # dashboard opens in a pop-up (Uptime Kuma, GitHub) would cover the screen with no way to close it.
-      # Full screen keeps pop-ups as normal, smaller windows with their own close button.
+    if [ -z "\${WAYLAND_DISPLAY:-}" ] && command -v xdotool >/dev/null && [ "\${KIOSK_MODE:-kiosk}" = fullscreen ]; then
+      # optional (KIOSK_MODE=fullscreen): full screen like F11 instead of --kiosk. Pop-up pages then get a
+      # normal, smaller window with a close button, but the screen is less locked down. The default, --kiosk,
+      # forces every window full screen, so the dashboard shows outside links as an address instead.
       firefox --no-remote --profile "\$PROFILE" "\$URL" &
       FPID=\$!
       for i in \$(seq 1 60); do
