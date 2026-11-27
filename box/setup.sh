@@ -45,6 +45,9 @@ install -m 644 "$REPO"/collector/collector.py "$REPO"/collector/netcheck.py "$RE
   "$REPO"/collector/netswitch.py "$REPO"/collector/identify.py "$REPO"/collector/alerts.py "$REPO"/collector/boxhealth.py \
   "$REPO"/collector/dhcpsniff.py "$APP/collector/"
 [ -f "$APP/lanpulse.env" ] || install -m 600 "$BOX/lanpulse.env.example" "$APP/lanpulse.env"
+# notes on the same line as a value ("KEY=1   # note") are read as part of the value by docker and
+# older readers: move each note onto its own line above (installs made from the old example file)
+sed -i -E 's/^([A-Z_]+=[^[:space:]]*)[[:space:]]+#[[:space:]]?(.*)$/# \2\n\1/' "$APP/lanpulse.env"
 # older installs: turn on the netcheck and router sources (router stays idle until ROUTER_TYPE is set)
 sed -i 's/^LANPULSE_SOURCES=uptime-kuma$/LANPULSE_SOURCES=uptime-kuma,netcheck,router/' "$APP/lanpulse.env"
 

@@ -38,7 +38,7 @@ def env(name, default=""):
         for line in open(os.path.join(APP, "lanpulse.env")):
             k, _, v = line.strip().partition("=")
             if k == name:
-                return v.strip().strip('"')
+                return re.split(r"\s+#", v, 1)[0].strip().strip('"')   # "VALUE   # note" -> VALUE
     except OSError:
         pass
     return default

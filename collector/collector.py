@@ -38,13 +38,21 @@ def now_iso():
 STATUS = {0: "down", 1: "up", 2: "pending", 3: "maintenance"}
 
 
+class KumaSetup(RuntimeError):
+    """Uptime Kuma is running but nobody has created its admin account yet (a new box)."""
+
+
 def source_uptime_kuma():
     """Reads an Uptime Kuma status page through its public (no-login) API."""
     base = os.environ.get("KUMA_URL", "http://uptime-kuma:3001").rstrip("/")
     slug = os.environ.get("KUMA_STATUS_SLUG", "dashboard")
     _, page = http(f"{base}/api/status-page/{slug}")
     _, beats = http(f"{base}/api/status-page/heartbeat/{slug}")
-    page, beats = json.loads(page), json.loads(beats)
+    try:
+        page, beats = json.loads(page), json.loads(beats)
+    except ValueError:
+        # a fresh Kuma answers every address with its web app (HTML) until the admin account exists
+        raise KumaSetup("Uptime Kuma isn't set up yet: open it on port 3001 and create the admin account")
     hb, up = beats.get("heartbeatList", {}), beats.get("uptimeList", {})
     groups = []
     for g in page.get("publicGroupList", []):
@@ -801,7 +809,9 @@ def build_snapshot():
             snap["extras"].update(part.get("extras", {}))
         except Exception as e:
             src = {"name": name, "ok": False, "error": str(e)[:200]}
-            if time.time() - STARTED < STARTUP_GRACE:
+            if isinstance(e, KumaSetup):
+                src["setup"] = True                    # a one-time step for a person, not a fault or a delay
+            elif time.time() - STARTED < STARTUP_GRACE:
                 src["starting"] = True                 # the dashboard doesn't warn about these
             snap["sources"].append(src)
             log(f"source {name} failed{' (still starting up)' if src.get('starting') else ''}: {e}")

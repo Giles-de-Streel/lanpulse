@@ -349,10 +349,14 @@ function render(snap) {
   $("#updated").textContent = gen ? `Updated ${ago(snap.generated)}${$("#updated").dataset.s}` : "";
   $("#updated").dataset.t = snap.generated || "";
   $("#updated").className = stale ? "stale" : "";
+  const setup = failed.find((s) => s.setup);         // new box: Uptime Kuma needs its admin account first
+  const rest = failed.filter((s) => !s.setup);
   $("#warning").hidden = !(stale || failed.length);
-  $("#warning").textContent = stale
-    ? "This information is out of date. The monitoring box may be off or disconnected."
-    : failed.length ? `Some data couldn't be read: ${failed.map((f) => f.name).join(", ")}` : "";
+  if (stale) $("#warning").textContent = "This information is out of date. The monitoring box may be off or disconnected.";
+  else if (setup) $("#warning").innerHTML = `<b>One step left:</b> open <a href="http://${esc(location.hostname)}:3001/" target="_blank" rel="noopener">Uptime Kuma</a>
+    and create its admin account. The device and service checks appear here by themselves within a few minutes.` +
+    (rest.length ? ` Also couldn't read: ${esc(rest.map((f) => f.name).join(", "))}.` : "");
+  else $("#warning").textContent = failed.length ? `Some data couldn't be read: ${failed.map((f) => f.name).join(", ")}` : "";
 }
 
 // ---------------------------------------------------------------- detail panels (extras)
