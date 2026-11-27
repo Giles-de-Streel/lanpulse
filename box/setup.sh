@@ -21,7 +21,7 @@ pkg_refresh
 command -v docker >/dev/null || pkg_install required docker
 pkg_install required python3 sqlite3 curl openssl iproute2 iw avahi ping
 pkg_install optional nmap arp-scan mtr iperf3 traceroute dig ethtool wavemon \
-  speedtest net-tools snmp smartmontools upnpc avahi-browse
+  speedtest net-tools snmp smartmontools upnpc avahi-browse age git
 [ "$ADMIN_USER" != root ] && usermod -aG docker "$ADMIN_USER"
 systemctl enable --now docker >/dev/null
 compose_ok || pkg_install optional compose
@@ -42,7 +42,7 @@ install -m 644 "$BOX/docker-compose.yml" "$BOX/Caddyfile" "$APP/"
 install -m 755 "$BOX"/scripts/*.sh "$APP/scripts/"
 rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/"
 install -m 644 "$REPO"/collector/collector.py "$REPO"/collector/netcheck.py "$REPO"/collector/history.py \
-  "$REPO"/collector/netswitch.py "$REPO"/collector/identify.py "$REPO"/collector/alerts.py "$APP/collector/"
+  "$REPO"/collector/netswitch.py "$REPO"/collector/identify.py "$REPO"/collector/alerts.py "$REPO"/collector/boxhealth.py "$APP/collector/"
 [ -f "$APP/lanpulse.env" ] || install -m 600 "$BOX/lanpulse.env.example" "$APP/lanpulse.env"
 # older installs: turn on the netcheck and router sources (router stays idle until ROUTER_TYPE is set)
 sed -i 's/^LANPULSE_SOURCES=uptime-kuma$/LANPULSE_SOURCES=uptime-kuma,netcheck,router/' "$APP/lanpulse.env"
@@ -246,6 +246,35 @@ WantedBy=timers.target
 EOF
 systemctl daemon-reload
 systemctl enable --now lanpulse-reboot-check.timer >/dev/null 2>&1
+
+echo "== heartbeat to an outside service (every 5 min, when LANPULSE_HEARTBEAT_URL is set)"
+cat > /etc/systemd/system/lanpulse-heartbeat.service <<EOF
+[Unit]
+Description=lanpulse: tell an outside service the box is alive
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=APP=$APP
+ExecStart=$APP/scripts/heartbeat.sh
+EOF
+cat > /etc/systemd/system/lanpulse-heartbeat.timer <<'EOF'
+[Unit]
+Description=lanpulse heartbeat every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+EOF
+# journald: cap the system log too, so nothing grows without limit
+mkdir -p /etc/systemd/journald.conf.d
+printf '[Journal]\nSystemMaxUse=300M\n' > /etc/systemd/journald.conf.d/lanpulse.conf
+systemctl restart systemd-journald 2>/dev/null || true
+systemctl daemon-reload
+systemctl enable --now lanpulse-heartbeat.timer >/dev/null 2>&1
 
 echo "== done"
 docker ps --format '{{.Names}}  {{.Status}}'

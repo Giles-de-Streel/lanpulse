@@ -822,6 +822,17 @@ def build_snapshot():
             health = {"name": "Network health", "items": []}
             snap["groups"].append(health)
         health["items"].append(util)
+    try:                                           # the box's own power (laptop battery) and disk space
+        import boxhealth
+        bh = boxhealth.items()
+        if bh:
+            grp = next((g for g in snap["groups"] if g["name"] == "Monitoring box"), None)
+            if grp is None:
+                grp = {"name": "Monitoring box", "items": []}
+                snap["groups"].insert(0, grp)
+            grp["items"] += bh
+    except Exception as e:
+        log(f"box health: {e}")
     snap["checking"] = still_checking(snap)
     counts = {}
     for g in snap["groups"]:
