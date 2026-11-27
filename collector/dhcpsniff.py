@@ -5,16 +5,21 @@ hostname (option 12, e.g. "Galaxy-S23", "HS105"), a vendor class (option 60, e.g
 "MSFT 5.0") and the list of settings it asks for (option 55, which differs between Apple, Android,
 Windows and embedded devices). identify.py turns these into "probably ..." labels.
 
+Over IPv6, DHCPv6 requests (Windows, Macs, Linux; not Android) add a name (option 39), a vendor tag
+(option 16, e.g. "MSFT 5.0") and a DUID (option 1): an ID that stays the same when a laptop or phone
+changes its private Wi-Fi address, so identify.py can say "same device as ..." for a "new" address.
+
 Runs on the box as root (systemd lanpulse-dhcpsniff.service). It only listens: nothing is sent.
-Writes $APP/config/dhcp-seen.json: {mac: {"t", "host", "vendor", "params", "ip"}}.
+Writes $APP/config/dhcp-seen.json: {mac: {"t", "host", "vendor", "params", "ip", "duid", "v6host", "v6vendor"}}.
 """
-import json, os, socket, struct, sys, time
+import json, os, select, socket, struct, sys, time
 
 APP = os.environ.get("APP", "/opt/monitor")
 OUT = os.path.join(APP, "config", "dhcp-seen.json")
 KEEP = 90 * 86400            # forget devices not heard from in 90 days
 MAX = 2000
 ETH_P_IP = 0x0800
+ETH_P_IPV6 = 0x86DD
 
 
 def load():
@@ -88,18 +93,56 @@ def parse(frame):
     return mac, {k: v for k, v in info.items() if v}
 
 
+def parse6(frame):
+    """(mac, info) from an Ethernet frame carrying a DHCPv6 request from a client, or None."""
+    if len(frame) < 14 + 40 + 8 + 4 or struct.unpack("!H", frame[12:14])[0] != ETH_P_IPV6:
+        return None
+    ip6 = frame[14:]
+    if ip6[6] != 17:                                  # UDP directly after the IPv6 header
+        return None
+    udp = ip6[40:]
+    sport, dport = struct.unpack("!HH", udp[:4])
+    if sport != 546 or dport != 547:
+        return None
+    msg = udp[8:]
+    if msg[0] not in (1, 3, 5, 6, 11):                # solicit, request, renew, rebind, information-request
+        return None
+    mac = ":".join(f"{b:02x}" for b in frame[6:12])
+    info, i = {}, 4
+    while i + 4 <= len(msg):
+        code, n = struct.unpack("!HH", msg[i:i + 4])
+        v = msg[i + 4:i + 4 + n]
+        i += 4 + n
+        if code == 1 and v:
+            info["duid"] = v.hex()
+        elif code == 16 and len(v) > 6:               # enterprise number, then length-prefixed strings
+            ln = struct.unpack("!H", v[4:6])[0]
+            info["v6vendor"] = text(v[6:6 + ln])
+        elif code == 39 and len(v) > 2:               # flags, then the name in DNS label form
+            j, labels = 1, []
+            while j < len(v) and v[j] and j + 1 + v[j] <= len(v):
+                labels.append(v[j + 1:j + 1 + v[j]].decode("utf-8", "replace"))
+                j += 1 + v[j]
+            if labels:
+                info["v6host"] = labels[0][:64]
+    return mac, {k: v for k, v in info.items() if v}
+
+
 def main():
-    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_IP))
+    s4 = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_IP))
+    try:
+        s6 = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_IPV6))
+    except OSError:
+        s6 = None
+    socks = [x for x in (s4, s6) if x]
     seen, dirty, last = load(), False, 0.0
-    print(f"dhcpsniff: listening, {len(seen)} devices remembered", flush=True)
-    s.settimeout(30)
+    print(f"dhcpsniff: listening (IPv4{' and IPv6' if s6 else ''}), {len(seen)} devices remembered", flush=True)
     while True:
-        try:
-            frame = s.recv(2048)
-        except socket.timeout:
-            frame = None
-        got = parse(frame) if frame else None
-        if got:
+        ready, _, _ = select.select(socks, [], [], 30)
+        for sk in ready:
+            got = (parse6 if sk is s6 else parse)(sk.recv(2048))
+            if not got:
+                continue
             mac, info = got
             old = seen.get(mac, {})
             new = {**old, **info, "t": time.time()}

@@ -43,7 +43,7 @@ install -m 755 "$BOX"/scripts/*.sh "$APP/scripts/"
 rm -rf "$APP"/web/* && cp -r "$REPO"/web/. "$APP/web/"
 install -m 644 "$REPO"/collector/collector.py "$REPO"/collector/netcheck.py "$REPO"/collector/history.py \
   "$REPO"/collector/netswitch.py "$REPO"/collector/identify.py "$REPO"/collector/alerts.py "$REPO"/collector/boxhealth.py \
-  "$REPO"/collector/dhcpsniff.py "$APP/collector/"
+  "$REPO"/collector/dhcpsniff.py "$REPO"/collector/discover.py "$APP/collector/"
 [ -f "$APP/lanpulse.env" ] || install -m 600 "$BOX/lanpulse.env.example" "$APP/lanpulse.env"
 # notes on the same line as a value ("KEY=1   # note") are read as part of the value by docker and
 # older readers: move each note onto its own line above (installs made from the old example file)

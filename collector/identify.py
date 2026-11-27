@@ -7,6 +7,9 @@ Runs on the box (as root, from netcheck.py). Clues, best first:
     themselves there even though their network chip only says "Amazon" (cached per device for a week)
   - an nmap OS fingerprint for devices that announce nothing (cached per device for a week)
   - the maker of the network chip (from the MAC address), translated into plain words
+  - their makers' own local discovery (discover.py): Kasa, Govee, WiZ, Yeelight, LIFX, Tuya, WS-Discovery
+  - DHCPv6 (from dhcpsniff.py): IPv6 name, vendor tag, and an ID that links a new private MAC to a known device
+  - when it is online (two weeks of hourly samples): always on, comes and goes daily, or rarely seen
 Each device gets "hint" (a short "probably ..." label) and "clues" (the evidence, for the details view).
 Nothing here changes the device; it only listens and asks politely.
 """
@@ -30,6 +33,14 @@ MDNS_KINDS = {   # service type -> (what it means, TXT key holding a friendly na
     "_scanner._tcp": ("scanner", None, "ty"),
     "_smb._tcp": ("computer (file sharing)", None, None), "_dosvc._tcp": ("Windows PC", None, None),
     "_workstation._tcp": ("computer", None, None), "_nvstream._tcp": ("NVIDIA Shield / gaming PC", None, None),
+}
+HAP_CATEGORIES = {   # HomeKit "ci" (accessory category) -> plain words
+    "2": "bridge (hub for other devices)", "3": "fan", "4": "garage door opener", "5": "light bulb", "6": "door lock",
+    "7": "smart plug", "8": "light switch", "9": "thermostat", "10": "sensor", "11": "security system", "12": "door",
+    "13": "window", "14": "blinds or shades", "15": "button", "16": "range extender", "17": "camera",
+    "18": "video doorbell", "19": "air purifier", "20": "heater", "21": "air conditioner", "22": "humidifier",
+    "23": "dehumidifier", "26": "speaker", "28": "sprinkler", "29": "faucet", "30": "shower", "31": "TV",
+    "32": "remote", "33": "router",
 }
 MDNS_CLUES = {   # service types that are worth mentioning but don't say what the device is
     "_spotify-connect._tcp": "plays Spotify (speaker, TV or app)",
@@ -84,6 +95,8 @@ def mdns_scan(seconds=10):
         d = found.setdefault(ip, {"kinds": [], "names": [], "models": [], "clues": []})
         if stype in MDNS_KINDS:
             kind, nkey, mkey = MDNS_KINDS[stype]
+            if stype.startswith("_hap.") and txt.get("ci") in HAP_CATEGORIES:
+                kind = f"HomeKit {HAP_CATEGORIES[txt['ci']]}"      # "HomeKit smart plug", not just "HomeKit accessory"
             if kind not in d["kinds"]:
                 d["kinds"].append(kind)
             nm = txt.get(nkey) if nkey else (name.split("@", 1)[-1] if stype == "_raop._tcp" else None)
@@ -208,14 +221,63 @@ def plain(table, text):
     return next((words for key, words in table if key in t), None)
 
 
+PRESENCE_HOURS = 14 * 24   # online pattern: remember which hours each device was online, two weeks back
+
+
+def presence(devs, state, now):
+    """{mac: (clue, cand or None)} from when each device is online: always on, comes and goes daily, or rarely seen.
+    Counts hours the box itself was running, so a box that was switched off doesn't make devices look absent."""
+    pr = state.setdefault("presence", {"box": [], "dev": {}})
+    hour, cut = int(now // 3600), int(now // 3600) - PRESENCE_HOURS
+    if hour not in pr["box"]:
+        pr["box"].append(hour)
+    pr["box"] = [h for h in pr["box"] if h > cut]
+    for d in devs:
+        if d.get("online") and d.get("mac"):
+            hs = pr["dev"].setdefault(d["mac"], [])
+            if hour not in hs:
+                hs.append(hour)
+    pr["dev"] = {m: [h for h in hs if h > cut] for m, hs in pr["dev"].items()}
+    pr["dev"] = {m: hs for m, hs in pr["dev"].items() if hs}
+    out = {}
+    for mac, hs in pr["dev"].items():
+        since = min(hs)
+        box = [h for h in pr["box"] if h >= since]
+        box_days = len({h // 24 for h in pr["box"]})
+        if len(box) < 72 and box_days < 7:         # need about three days of watching first
+            continue
+        frac = len(hs) / max(1, len(box))
+        days = len({h // 24 for h in hs})
+        all_days = len({h // 24 for h in box})
+        if frac >= 0.9:
+            out[mac] = (f"always on (online {round(100 * frac)}% of the time over {all_days} days)", None)
+        elif box_days >= 7 and days <= 2 and min(hs) > min(pr["box"]) + 48:
+            out[mac] = (f"seen on only {days} day{'s' if days > 1 else ''} in the last two weeks: possibly a visitor's device",
+                        (12.8, "visitor's phone or laptop"))
+        elif all_days >= 3 and days / all_days >= 0.6 and frac < 0.75:
+            per_day = round(len(hs) / days)
+            out[mac] = (f"comes and goes daily (online about {per_day} h a day)", (12.9, "phone or laptop (comes and goes daily)"))
+    return out
+
+
 def identify(devs, state):
     """Add "hint" and "clues" to devices (in place). state caches the slower per-device checks by MAC."""
     online = [d for d in devs if d.get("online") and d.get("ip")]
     if not online:
         return
-    mdns, ssdp, dhcp = mdns_scan(), ssdp_scan(), load_dhcp()
-    cache = state.setdefault("identify_os", {})
+    with ThreadPoolExecutor(max_workers=2) as pool:          # the gadget questions run while mDNS listens
+        disc_f = pool.submit(discover_scan)
+        mdns = mdns_scan()
+        disc = disc_f.result()
+    ssdp, dhcp = ssdp_scan(), load_dhcp()
     now = time.time()
+    pattern = presence(devs, state, now)
+    duids = {}                                                 # DHCPv6 ID -> MACs it was seen with
+    for mac, inf in dhcp.items():
+        if inf.get("duid"):
+            duids.setdefault(inf["duid"], []).append(mac)
+    by_mac = {(x.get("mac") or "").lower(): x for x in devs}
+    cache = state.setdefault("identify_os", {})
     need = [d for d in online if not d.get("name") and not d.get("this_box") and d["ip"] not in mdns
             and d["ip"] not in ssdp and now - (cache.get(d["mac"]) or {}).get("t", 0) > OS_TTL][:OS_PER_RUN]
     for ip, fp in os_scan([d["ip"] for d in need]).items():
@@ -256,6 +318,26 @@ def identify(devs, state):
                               not (host and match_hint(HOST_HINTS, host)) else 1, lab))
             elif host:
                 cands.append((9, f'device calling itself "{host}"'))
+        if info and info.get("duid"):           # the same DHCPv6 ID under another MAC: one device, new private address
+            for other in duids.get(info["duid"], []):
+                if other == d["mac"].lower():
+                    continue
+                o = by_mac.get(other) or {}
+                who = o.get("name") or o.get("hint")
+                clues.append(f"same device as {who + ' (' + other.upper() + ')' if who else other.upper()}: "
+                             "same IPv6 DHCP ID under a different MAC address")
+                if o.get("name"):
+                    cands.append((1.2, f'{o["name"]} (new private address)'))
+                break
+        x = disc.get(d["ip"])
+        if x:
+            clues += [c for c in x["clues"] if c not in clues]
+            cands += x["cands"]
+        if d["mac"] in pattern:
+            clue, cand = pattern[d["mac"]]
+            clues.append(clue)
+            if cand:
+                cands.append(cand)
         # the name the network already knows it by (router / device finder), e.g. "echoshow-…", "moto-g-2025"
         known = match_hint(HOST_HINTS, d.get("name")) if d.get("name") else None
         if known:
@@ -326,6 +408,16 @@ def identify(devs, state):
             d["clues"] = clues
 
 
+def discover_scan():
+    """Answers from smart-home gadgets, cameras and PCs to their makers' own local discovery (discover.py)."""
+    try:
+        import discover
+        return discover.run()
+    except Exception as e:
+        print(f"identify: discovery: {e}", file=sys.stderr)
+        return {}
+
+
 PROBE_PER_RUN = 12
 
 
@@ -390,12 +482,20 @@ def dhcp_clues(info):
     """(clues, label, hostname) from what the device said in its DHCP request."""
     clues, label = [], None
     host, vc, params = info.get("host"), info.get("vendor"), (info.get("params") or "").split(",")
+    h6, v6 = info.get("v6host"), info.get("v6vendor")
     if host:
         clues.append(f'calls itself "{host}" when it joins')
         label = match_hint(HOST_HINTS, host)
+    if h6 and (h6 or "").lower() != (host or "").lower():
+        clues.append(f'calls itself "{h6}" over IPv6')
+        label = label or match_hint(HOST_HINTS, h6)
+        host = host or h6
     if vc:
         clues.append(f'DHCP vendor tag "{vc}"')
         label = label or match_hint(VENDOR_CLASS_HINTS, vc)
+    if v6 and v6 != vc:
+        clues.append(f'IPv6 DHCP vendor tag "{v6}"')
+        label = label or match_hint(VENDOR_CLASS_HINTS, v6)
     if not vc and "108" in params and "114" in params:
         clues.append("asks for network settings the way Apple devices do")
         label = label or "Apple device (iPhone, iPad or Mac)"
