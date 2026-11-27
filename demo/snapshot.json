@@ -3563,7 +3563,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:79",
@@ -3575,7 +3576,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:7A",
@@ -3587,7 +3589,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:7B",
@@ -3599,7 +3602,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:7C",
@@ -3611,7 +3615,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:7D",
@@ -3623,7 +3628,8 @@
     "online": true,
     "new": false,
     "random_mac": true,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:7E",
@@ -3671,7 +3677,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:82",
@@ -3683,7 +3690,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:83",
@@ -3695,7 +3703,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:84",
@@ -3707,7 +3716,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:85",
@@ -3719,7 +3729,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:86",
@@ -3731,7 +3742,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:87",
@@ -3803,7 +3815,12 @@
     "online": true,
     "new": true,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "hint": "Samsung Galaxy tablet",
+    "clues": [
+     "calls itself \"Galaxy-Tab\" when it joins",
+     "DHCP vendor tag \"android-dhcp-14\""
+    ]
    },
    {
     "mac": "02:00:5E:00:00:8D",
@@ -3815,7 +3832,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:8E",
@@ -3827,7 +3845,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:8F",
@@ -3863,7 +3882,8 @@
     "online": true,
     "new": false,
     "random_mac": false,
-    "ssid": null
+    "ssid": null,
+    "named": true
    },
    {
     "mac": "02:11:22:33:44:55",
@@ -3880,6 +3900,7 @@
    {
     "mac": "02:00:5E:00:03:E7",
     "name": "Old laptop",
+    "named": true,
     "ip": "192.168.1.99",
     "vendor": null,
     "first_seen": "2025-10-03T12:00:00+00:00",
@@ -3981,6 +4002,7 @@
      "node": "Office switch",
      "rate_mbps": 1000
     },
+    "named": true,
     "usage": {
      "down_bps": 600000,
      "up_bps": 150000,
@@ -3998,6 +4020,7 @@
      "node": "Office switch",
      "rate_mbps": 1000
     },
+    "named": true,
     "usage": {
      "down_bps": 1200000,
      "up_bps": 2700000,
@@ -4014,7 +4037,8 @@
      "type": "wired",
      "node": "Office switch",
      "rate_mbps": 1000
-    }
+    },
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:7B",
@@ -4026,6 +4050,7 @@
      "node": "Office switch",
      "rate_mbps": 1000
     },
+    "named": true,
     "usage": {
      "down_bps": 400000,
      "up_bps": 6200000,
@@ -4042,7 +4067,8 @@
      "type": "wired",
      "node": "Office switch",
      "rate_mbps": 100
-    }
+    },
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:7D",
@@ -4054,6 +4080,7 @@
      "node": "Office switch",
      "rate_mbps": 100
     },
+    "named": true,
     "usage": {
      "down_bps": 90000,
      "up_bps": 90000,
@@ -4130,6 +4157,7 @@
      "rssi": -55,
      "rate_mbps": 433
     },
+    "named": true,
     "usage": {
      "down_bps": 18400000,
      "up_bps": 600000,
@@ -4149,6 +4177,7 @@
      "rssi": -63,
      "rate_mbps": 72
     },
+    "named": true,
     "usage": {
      "down_bps": 50000,
      "up_bps": 1900000,
@@ -4168,6 +4197,7 @@
      "rssi": -81,
      "rate_mbps": 26
     },
+    "named": true,
     "usage": {
      "down_bps": 40000,
      "up_bps": 1600000,
@@ -4187,6 +4217,7 @@
      "rssi": -66,
      "rate_mbps": 65
     },
+    "named": true,
     "usage": {
      "down_bps": 400,
      "up_bps": 300,
@@ -4205,7 +4236,8 @@
      "node": "Mesh point: Classroom wing",
      "rssi": -71,
      "rate_mbps": 52
-    }
+    },
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:86",
@@ -4218,7 +4250,8 @@
      "node": "Main router",
      "rssi": -79,
      "rate_mbps": 39
-    }
+    },
+    "named": true
    },
    {
     "mac": "02:00:5E:00:00:87",
@@ -4328,6 +4361,7 @@
      "rssi": -62,
      "rate_mbps": 72
     },
+    "named": true,
     "usage": {
      "down_bps": 120000,
      "up_bps": 20000,
@@ -4347,6 +4381,7 @@
      "rssi": -50,
      "rate_mbps": 1921
     },
+    "named": true,
     "usage": {
      "down_bps": 9100000,
      "up_bps": 1300000,
@@ -4395,7 +4430,8 @@
      "type": "wired",
      "node": "Office switch",
      "rate_mbps": 100
-    }
+    },
+    "named": true
    }
   ],
   "client_bands": {
