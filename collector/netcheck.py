@@ -544,7 +544,7 @@ def check_airspace(state):
         if len(same) >= 2:
             problems.append(f"{n['band']} GHz channel {n['channel']} is shared with {len(same)} strong neighbouring networks")
     # congestion on the channels your network uses
-    chans = congestion(nets, {n["bssid"] for n in mine})
+    chans = congestion(nets, {n["bssid"] for n in nets if n["own"]})   # incl. your hidden/guest networks
     for c in chans:
         own_only = c["utilisation_pct"] is not None and c["networks"] == c["yours"] and not c["overlapping"]
         if own_only:
