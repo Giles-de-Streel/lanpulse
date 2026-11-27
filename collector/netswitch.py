@@ -170,7 +170,8 @@ def lp_env(name, default=""):
         for line in open(os.path.join(APP, "lanpulse.env")):
             k, _, v = line.strip().partition("=")
             if k == name:
-                return re.split(r"\s+#", v, 1)[0].strip().strip('"')   # a note follows a space; "#" in a value stays
+                v = re.split(r"\s+#", v, 1)[0].strip().strip('"')   # a note follows a space; "#" in a value stays
+                return v or default                    # "KEY=" left blank means "use the default"
     except OSError:
         pass
     return default
