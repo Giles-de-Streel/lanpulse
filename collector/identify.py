@@ -277,7 +277,8 @@ def identify(devs, state):
         if inf.get("duid"):
             duids.setdefault(inf["duid"], []).append(mac)
     by_mac = {(x.get("mac") or "").lower(): x for x in devs}
-    rnames = router_names()
+    rclients = router_names(with_ip=True)
+    rnames = {mac: n for mac, (n, _) in rclients.items()}
     cache = state.setdefault("identify_os", {})
     need = [d for d in online if not d.get("name") and not d.get("this_box") and d["ip"] not in mdns
             and d["ip"] not in ssdp and now - (cache.get(d["mac"]) or {}).get("t", 0) > OS_TTL][:OS_PER_RUN]
@@ -350,10 +351,13 @@ def identify(devs, state):
         if rn:                                  # the device finder has no name for it, but the router does
             clues.append(f'the router knows it as "{rn}"')
             k = match_hint(HOST_HINTS, rn)
-            twin = next((o for o in online if o is not d and rn.lower() in
-                         ((o.get("name") or "").lower(), (rnames.get(o["mac"].lower()) or "").lower())), None)
+            # look at every known device and every router client, not just ones online now: the other
+            # "Tesla_Model_3" (the real car) comes and goes, and was offline when this one was checked
+            twin = next((o.get("ip") or o["mac"].upper() for o in devs if o is not d and o.get("mac") and rn.lower() in
+                         ((o.get("name") or "").lower(), (rnames.get(o["mac"].lower()) or "").lower())), None) \
+                or next((ip or mac.upper() for mac, (n, ip) in rclients.items() if mac != d["mac"].lower() and n.lower() == rn.lower()), None)
             if twin:                            # two devices with one name (a copied or joke name): don't guess from it
-                clues.append(f"{twin['ip']} uses the same name, so the name says little about what this is")
+                clues.append(f"{twin} uses the same name, so the name says little about what this is")
             else:
                 cands.append((3.2, k) if k else (9, f'device the router calls "{rn}"'))
         if u:
@@ -422,11 +426,12 @@ def identify(devs, state):
             d["clues"] = clues
 
 
-def router_names():
-    """{mac: name} from the router's client list (the collector saves it in the snapshot)."""
+def router_names(with_ip=False):
+    """{mac: name} (or {mac: (name, ip)}) from the router's client list (the collector saves it in the snapshot)."""
     try:
         snap = json.load(open(os.path.join(os.environ.get("APP", "/opt/monitor"), "data", "snapshot.json")))
-        return {(c.get("mac") or "").lower(): c["name"] for c in (snap.get("extras") or {}).get("clients") or [] if c.get("name")}
+        return {(c.get("mac") or "").lower(): ((c["name"], c.get("ip")) if with_ip else c["name"])
+                for c in (snap.get("extras") or {}).get("clients") or [] if c.get("name")}
     except (OSError, ValueError, AttributeError):
         return {}
 
